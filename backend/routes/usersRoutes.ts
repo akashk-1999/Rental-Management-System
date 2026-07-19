@@ -1,0 +1,27 @@
+import { Router } from 'express';
+import { UsersController } from '../controllers/usersController';
+import { authenticateToken } from '../middlewares/authMiddleware';
+
+/**
+ * Factory function to create and configure the users router.
+ * Implements Dependency Injection by accepting the UsersController instance.
+ *
+ * @param usersController - The injected UsersController instance.
+ * @returns An Express Router configured with users routes.
+ */
+export function createUsersRouter(usersController: UsersController): Router {
+  const router = Router();
+
+  /**
+   * GET /users
+   * 1. JWT Authentication Middleware
+   * 2. UsersController.getAllUsers
+   */
+  router.get(
+    '/users',
+    authenticateToken,
+    usersController.getAllUsers.bind(usersController)
+  );
+
+  return router;
+}

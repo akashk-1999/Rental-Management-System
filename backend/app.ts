@@ -6,6 +6,9 @@ import { UserRepository } from './repositories/userRepository';
 import { AuthService } from './services/authService';
 import { AuthController } from './controllers/authController';
 import { createAuthRouter } from './routes/authRoutes';
+import { UsersService } from './services/usersService';
+import { UsersController } from './controllers/usersController';
+import { createUsersRouter } from './routes/usersRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
@@ -16,6 +19,10 @@ const app = express();
 const userRepository = new UserRepository();
 const authService = new AuthService(userRepository);
 const authController = new AuthController(authService);
+
+// Dependency chain for the users module
+const usersService = new UsersService(userRepository);
+const usersController = new UsersController(usersService);
 
 // Standard middlewares
 app.use(cors());
@@ -60,6 +67,7 @@ app.use('/api', (req, res, next) => {
 });
 
 app.use('/api/auth', createAuthRouter(authController));
+app.use('/api', createUsersRouter(usersController));
 
 // We will mount other routes here (items, customers, rentals, dashboard) as we build them.
 
