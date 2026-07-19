@@ -1,0 +1,6 @@
+{
+  "name": "Rental Management System",
+  "description": "A mobile-first rental management application for a wedding and event rental business, helping to track rentals, returns, inventory, payments, and customers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

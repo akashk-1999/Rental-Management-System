@@ -1,0 +1,268 @@
+import { query, execute } from '../config/db';
+import logger from '../utils/logger';
+
+export interface User {
+  UserId: number;
+  Username: string;
+  PasswordHash: string;
+  FullName: string;
+  Role: 'Admin' | 'Staff';
+  IsActive: boolean;
+  CreatedAt: Date;
+  UpdatedAt: Date | null;
+}
+
+export class UserRepositoryError extends Error {
+  constructor(message: string, public readonly originalError?: any) {
+    super(message);
+    this.name = 'UserRepositoryError';
+  }
+}
+
+/**
+ * UserRepository provides SQL Server direct operations for managing the Users table.
+ * All queries are strictly parameterized and type-safe.
+ */
+export class UserRepository {
+  /**
+   * Retrieves a single user record by their unique integer primary key (UserId).
+   * 
+   * SQL Query:
+   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+   * FROM Users
+   * WHERE UserId = @UserId
+   */
+  static async getUserById(id: number): Promise<User | null> {
+    try {
+      const rows = await query<User>(
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
+         FROM Users 
+         WHERE UserId = @UserId`,
+        { UserId: id }
+      );
+      return rows.length > 0 ? rows[0] : null;
+    } catch (err: any) {
+      logger.error(`[UserRepository.getUserById] Database query failed: ${err.message}`);
+      throw new UserRepositoryError(`Failed to retrieve user by ID: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Retrieves a single user record by their unique login Username identifier.
+   * 
+   * SQL Query:
+   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+   * FROM Users
+   * WHERE Username = @Username
+   */
+  static async getUserByUsername(username: string): Promise<User | null> {
+    try {
+      const rows = await query<User>(
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
+         FROM Users 
+         WHERE Username = @Username`,
+        { Username: username }
+      );
+      return rows.length > 0 ? rows[0] : null;
+    } catch (err: any) {
+      logger.error(`[UserRepository.getUserByUsername] Database query failed: ${err.message}`);
+      throw new UserRepositoryError(`Failed to retrieve user by Username: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Retrieves all active user records from the Users table, ordered alphabetically by FullName.
+   * 
+   * SQL Query:
+   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+   * FROM Users
+   * WHERE IsActive = 1
+   * ORDER BY FullName ASC
+   */
+  static async getAllUsers(): Promise<User[]> {
+    try {
+      const rows = await query<User>(
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
+         FROM Users 
+         WHERE IsActive = 1 
+         ORDER BY FullName ASC`
+      );
+      return rows;
+    } catch (err: any) {
+      logger.error(`[UserRepository.getAllUsers] Database query failed: ${err.message}`);
+      throw new UserRepositoryError(`Failed to retrieve all active users: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Inserts a new user record into the Users table and returns the fully initialized entity.
+   * Leverages SQL Server's OUTPUT clause for atomic creation and field retrieval in a single query.
+   * 
+   * SQL Query:
+   * INSERT INTO Users (Username, PasswordHash, FullName, Role, IsActive)
+   * OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.CreatedAt, INSERTED.UpdatedAt
+   * VALUES (@Username, @PasswordHash, @FullName, @Role, 1)
+   */
+  static async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive'>): Promise<User> {
+    try {
+      const rows = await query<User>(
+        `INSERT INTO Users (Username, PasswordHash, FullName, Role, IsActive)
+         OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.CreatedAt, INSERTED.UpdatedAt
+         VALUES (@Username, @PasswordHash, @FullName, @Role, 1)`,
+        {
+          Username: user.Username,
+          PasswordHash: user.PasswordHash,
+          FullName: user.FullName,
+          Role: user.Role
+        }
+      );
+      
+      if (rows.length === 0) {
+        throw new Error('No row returned from insert execution.');
+      }
+      return rows[0];
+    } catch (err: any) {
+      logger.error(`[UserRepository.createUser] Database insertion failed: ${err.message}`);
+      const isDuplicate = err.number === 2627 || err.number === 2601 || 
+                          err.originalError?.number === 2627 || err.originalError?.number === 2601 ||
+                          (err.message && (err.message.includes('Violation of UNIQUE KEY') || err.message.includes('duplicate key')));
+      if (isDuplicate) {
+        throw new UserRepositoryError(`Duplicate user violation: Username '${user.Username}' already exists.`, err);
+      }
+      throw new UserRepositoryError(`Failed to create user record: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Updates mutable attributes (FullName, Role, IsActive) of an existing user and timestamps the change.
+   * Checks existence first to distinguish between 'User not found' and a successful update without treating unchanged values as an error.
+   * 
+   * SQL Query:
+   * UPDATE Users
+   * SET FullName = @FullName,
+   *     Role = @Role,
+   *     IsActive = @IsActive,
+   *     UpdatedAt = SYSUTCDATETIME()
+   * WHERE UserId = @UserId
+   */
+  static async updateUser(user: Pick<User, 'UserId' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+    try {
+      // Pre-check user existence to distinguish "not found" vs "successful update"
+      const existingUser = await UserRepository.getUserById(user.UserId);
+      if (!existingUser) {
+        throw new Error(`User with ID ${user.UserId} not found.`);
+      }
+
+      await execute(
+        `UPDATE Users
+         SET FullName = @FullName,
+             Role = @Role,
+             IsActive = @IsActive,
+             UpdatedAt = SYSUTCDATETIME()
+         WHERE UserId = @UserId`,
+        {
+          UserId: user.UserId,
+          FullName: user.FullName,
+          Role: user.Role,
+          IsActive: user.IsActive ? 1 : 0
+        }
+      );
+    } catch (err: any) {
+      logger.error(`[UserRepository.updateUser] Database update failed: ${err.message}`);
+      // Throw the direct "not found" error if that's what was raised
+      if (err.message && err.message.includes('not found')) {
+        throw new UserRepositoryError(err.message, err);
+      }
+      throw new UserRepositoryError(`Failed to update user record: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Performs a soft delete by setting IsActive to 0 (false) for the specified UserId.
+   * 
+   * SQL Query:
+   * UPDATE Users
+   * SET IsActive = 0,
+   *     UpdatedAt = SYSUTCDATETIME()
+   * WHERE UserId = @UserId
+   */
+  static async disableUser(id: number): Promise<void> {
+    try {
+      const { rowsAffected } = await execute(
+        `UPDATE Users
+         SET IsActive = 0,
+             UpdatedAt = SYSUTCDATETIME()
+         WHERE UserId = @UserId`,
+        { UserId: id }
+      );
+
+      if (rowsAffected === 0) {
+        throw new Error(`User with ID ${id} not found.`);
+      }
+    } catch (err: any) {
+      logger.error(`[UserRepository.disableUser] Database operation failed: ${err.message}`);
+      throw new UserRepositoryError(`Failed to disable user record: ${err.message}`, err);
+    }
+  }
+
+  /**
+   * Resets the PasswordHash field for the specified UserId and records the update time.
+   * 
+   * SQL Query:
+   * UPDATE Users
+   * SET PasswordHash = @PasswordHash,
+   *     UpdatedAt = SYSUTCDATETIME()
+   * WHERE UserId = @UserId
+   */
+  static async resetPassword(id: number, passwordHash: string): Promise<void> {
+    try {
+      const { rowsAffected } = await execute(
+        `UPDATE Users
+         SET PasswordHash = @PasswordHash,
+             UpdatedAt = SYSUTCDATETIME()
+         WHERE UserId = @UserId`,
+        {
+          UserId: id,
+          PasswordHash: passwordHash
+        }
+      );
+
+      if (rowsAffected === 0) {
+        throw new Error(`User with ID ${id} not found.`);
+      }
+    } catch (err: any) {
+      logger.error(`[UserRepository.resetPassword] Database update failed: ${err.message}`);
+      throw new UserRepositoryError(`Failed to reset user password: ${err.message}`, err);
+    }
+  }
+
+  // --- Instance Wrapper Methods for Dependency Injection ---
+
+  async getUserById(id: number): Promise<User | null> {
+    return UserRepository.getUserById(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    return UserRepository.getUserByUsername(username);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return UserRepository.getAllUsers();
+  }
+
+  async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive'>): Promise<User> {
+    return UserRepository.createUser(user);
+  }
+
+  async updateUser(user: Pick<User, 'UserId' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+    return UserRepository.updateUser(user);
+  }
+
+  async disableUser(id: number): Promise<void> {
+    return UserRepository.disableUser(id);
+  }
+
+  async resetPassword(id: number, passwordHash: string): Promise<void> {
+    return UserRepository.resetPassword(id, passwordHash);
+  }
+}
