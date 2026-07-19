@@ -6,11 +6,29 @@ interface GetUsersResponse {
   data: User[];
 }
 
+interface CreateUserRequest {
+  username: string;
+  password: string;
+  fullName: string;
+  role: "Admin" | "Staff";
+}
+
+interface CreateUserResponse {
+  success: boolean;
+  data: User;
+}
+
 async function getUsers(): Promise<User[]> {
   const response = await apiClient.get<GetUsersResponse>("/users");
   return response.data.data;
 }
 
+async function createUser(user: CreateUserRequest): Promise<User> {
+  const response = await apiClient.post<CreateUserResponse>("/users", user);
+  return response.data.data;
+}
+
 export const usersApi = {
   getUsers,
+  createUser,
 };
