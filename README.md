@@ -1,20 +1,60 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Rental Management System
 
-# Run and deploy your AI Studio app
+A full-stack Rental Management System built with React, TypeScript, Express.js, and Microsoft SQL Server.
 
-This contains everything you need to run your app locally.
+## Tech Stack
 
-View your app in AI Studio: https://ai.studio/apps/a5dcaa95-9e3f-4902-81a8-3ddcd7f7f25f
+### Frontend
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Axios
 
-## Run Locally
+### Backend
+- Express.js
+- TypeScript
+- JWT Authentication
+- Joi Validation
 
-**Prerequisites:**  Node.js
+### Database
+- Microsoft SQL Server
 
+## Features
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Authentication
+- Secure Login
+- JWT Authentication
+- Protected Routes
+- Session Persistence
+
+### Modules
+- Dashboard (In Progress)
+- Customer Management
+- Item Management
+- Rental Management
+- Returns
+- Payments
+- Reports
+
+## Project Status
+
+🚧 Currently under active development.
+
+Completed:
+- Backend Architecture
+- Database Integration
+- Authentication Module
+- React Frontend Setup
+- Login Page
+
+Upcoming:
+- Protected Routes
+- Dashboard
+- Customers Module
+- Inventory Module
+- Rental Workflow
+
+## Author
+
+Akash Kanbarkar
