@@ -23,5 +23,16 @@ export function createUsersRouter(usersController: UsersController): Router {
     usersController.getAllUsers.bind(usersController)
   );
 
+  /**
+   * POST /users
+   * 1. JWT Authentication Middleware
+   * 2. UsersController.createUser
+   */
+  router.post(
+    '/users',
+    authenticateToken,
+    usersController.createUser.bind(usersController)
+  );
+
   return router;
 }

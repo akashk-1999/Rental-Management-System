@@ -21,7 +21,7 @@ const authService = new AuthService(userRepository);
 const authController = new AuthController(authService);
 
 // Dependency chain for the users module
-const usersService = new UsersService(userRepository);
+const usersService = new UsersService(userRepository, authService);
 const usersController = new UsersController(usersService);
 
 // Standard middlewares

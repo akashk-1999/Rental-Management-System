@@ -27,4 +27,22 @@ export class UsersController {
       next(err);
     }
   }
+
+  /**
+   * Creates a new user from the request body and returns the created safe DTO.
+   */
+  async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { username, password, fullName, role } = req.body;
+
+      const createdUser = await this.usersService.createUser({ username, password, fullName, role });
+
+      res.status(201).json({
+        success: true,
+        data: createdUser
+      });
+    } catch (err: any) {
+      next(err);
+    }
+  }
 }
