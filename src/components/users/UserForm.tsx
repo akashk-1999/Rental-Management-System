@@ -1,7 +1,8 @@
-import { useState } from "react";
 import type { FormEvent } from "react";
 import Input from "../common/Input";
 import Button from "../common/Button";
+import { useEffect, useState } from "react";
+
 
 export interface UserFormValues {
   username: string;
@@ -14,8 +15,8 @@ export interface UserFormValues {
 interface UserFormProps {
   initialValues?: Partial<UserFormValues>;
   loading?: boolean;
+  mode?: "create" | "edit";
   onSubmit: (formData: UserFormValues) => void;
-  onCancel: () => void;
 }
 
 const DEFAULT_VALUES: UserFormValues = {
@@ -26,11 +27,23 @@ const DEFAULT_VALUES: UserFormValues = {
   isActive: true,
 };
 
-export default function UserForm({ initialValues, loading = false, onSubmit, onCancel }: UserFormProps) {
+export default function UserForm({
+  initialValues,
+  loading = false,
+  mode = "create",
+  onSubmit,
+}: UserFormProps) {
   const [values, setValues] = useState<UserFormValues>({
     ...DEFAULT_VALUES,
     ...initialValues,
   });
+
+  useEffect(() => {
+    setValues({
+      ...DEFAULT_VALUES,
+      ...initialValues,
+    });
+  }, [initialValues]);
 
   const handleChange = <K extends keyof UserFormValues>(field: K, value: UserFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -65,20 +78,23 @@ export default function UserForm({ initialValues, loading = false, onSubmit, onC
         required
       />
 
-      <Input
-        id="password"
-        label="Password"
-        type="password"
-        value={values.password}
-        onChange={(e) => handleChange("password", e.target.value)}
-        disabled={loading}
-        placeholder="Enter password"
-        required
-      />
+      {mode === "create" && (
+        <Input
+          id="password"
+          label="Password"
+          type="password"
+          value={values.password}
+          onChange={(e) => handleChange("password", e.target.value)}
+          disabled={loading}
+          placeholder="Enter password"
+          required
+        />
+      )}
 
       <div>
         <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1.5">
           Role
+          <span className="ml-0.5 text-rose-500">*</span>
         </label>
         <select
           id="role"
@@ -106,10 +122,7 @@ export default function UserForm({ initialValues, loading = false, onSubmit, onC
         </label>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
-          Cancel
-        </Button>
+      <div className="flex items-center justify-end pt-2">
         <Button type="submit" variant="primary" loading={loading}>
           Save
         </Button>

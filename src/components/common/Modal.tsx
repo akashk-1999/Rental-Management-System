@@ -6,10 +6,11 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  subtitle?: string;
   children: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, subtitle, children }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -32,22 +33,25 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200/60 p-6"
+        className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl"
       >
         {title && (
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-amber-200 bg-gradient-to-r from-amber-100 via-amber-200 to-amber-50 px-6 py-3">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+              {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+            </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="rounded-lg border border-slate-200 bg-white/70 p-1 text-slate-500 transition-colors duration-150 ease-in-out hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         )}
-        {children}
+        <div className="overflow-y-auto px-6 py-6">{children}</div>
       </div>
     </div>
   );

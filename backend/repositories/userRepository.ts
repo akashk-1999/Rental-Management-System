@@ -134,18 +134,19 @@ export class UserRepository {
   }
 
   /**
-   * Updates mutable attributes (FullName, Role, IsActive) of an existing user and timestamps the change.
+   * Updates mutable attributes (Username, FullName, Role, IsActive) of an existing user and timestamps the change.
    * Checks existence first to distinguish between 'User not found' and a successful update without treating unchanged values as an error.
-   * 
+   *
    * SQL Query:
    * UPDATE Users
-   * SET FullName = @FullName,
+   * SET Username = @Username,
+   *     FullName = @FullName,
    *     Role = @Role,
    *     IsActive = @IsActive,
    *     UpdatedAt = SYSUTCDATETIME()
    * WHERE UserId = @UserId
    */
-  static async updateUser(user: Pick<User, 'UserId' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+  static async updateUser(user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
     try {
       // Pre-check user existence to distinguish "not found" vs "successful update"
       const existingUser = await UserRepository.getUserById(user.UserId);
@@ -155,13 +156,15 @@ export class UserRepository {
 
       await execute(
         `UPDATE Users
-         SET FullName = @FullName,
+         SET Username = @Username,
+             FullName = @FullName,
              Role = @Role,
              IsActive = @IsActive,
              UpdatedAt = SYSUTCDATETIME()
          WHERE UserId = @UserId`,
         {
           UserId: user.UserId,
+          Username: user.Username,
           FullName: user.FullName,
           Role: user.Role,
           IsActive: user.IsActive ? 1 : 0
@@ -254,7 +257,7 @@ export class UserRepository {
     return UserRepository.createUser(user);
   }
 
-  async updateUser(user: Pick<User, 'UserId' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+  async updateUser(user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
     return UserRepository.updateUser(user);
   }
 

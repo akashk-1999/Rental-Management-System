@@ -34,5 +34,27 @@ export function createUsersRouter(usersController: UsersController): Router {
     usersController.createUser.bind(usersController)
   );
 
+  /**
+   * PUT /users/:id
+   * 1. JWT Authentication Middleware
+   * 2. UsersController.updateUser
+   */
+  router.put(
+    '/users/:id',
+    authenticateToken,
+    usersController.updateUser.bind(usersController)
+  );
+
+  /**
+   * DELETE /users/:id
+   * 1. JWT Authentication Middleware
+   * 2. UsersController.deleteUser
+   */
+  router.delete(
+    '/users/:id',
+    authenticateToken,
+    usersController.deleteUser.bind(usersController)
+  );
+
   return router;
 }

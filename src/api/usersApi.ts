@@ -18,6 +18,18 @@ interface CreateUserResponse {
   data: User;
 }
 
+interface UpdateUserRequest {
+  username: string;
+  fullName: string;
+  role: "Admin" | "Staff";
+  isActive: boolean;
+}
+
+interface UpdateUserResponse {
+  success: boolean;
+  data: User;
+}
+
 async function getUsers(): Promise<User[]> {
   const response = await apiClient.get<GetUsersResponse>("/users");
   return response.data.data;
@@ -28,7 +40,18 @@ async function createUser(user: CreateUserRequest): Promise<User> {
   return response.data.data;
 }
 
+async function updateUser(userId: number, user: UpdateUserRequest): Promise<User> {
+  const response = await apiClient.put<UpdateUserResponse>(`/users/${userId}`, user);
+  return response.data.data;
+}
+
+async function deleteUser(userId: number): Promise<void> {
+  await apiClient.delete(`/users/${userId}`);
+}
+
 export const usersApi = {
   getUsers,
   createUser,
+  updateUser,
+  deleteUser,
 };

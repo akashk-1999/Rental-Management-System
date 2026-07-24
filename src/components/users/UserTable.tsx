@@ -1,6 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
 import Table, { TableColumn } from "../common/Table";
-import Button from "../common/Button";
 import { User } from "../../types/user";
 
 interface UserTableProps {
@@ -23,23 +22,25 @@ export default function UserTable({ users, onEdit, onDelete }: UserTableProps) {
       key: "actions",
       header: "Actions",
       render: (user) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
             onClick={() => onEdit?.(user)}
+            title="Edit"
             aria-label={`Edit ${user.username}`}
+            className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             onClick={() => onDelete?.(user)}
+            title="Delete"
             aria-label={`Delete ${user.username}`}
+            className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
           >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       ),
     },

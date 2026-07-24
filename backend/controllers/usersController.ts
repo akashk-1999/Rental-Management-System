@@ -45,4 +45,41 @@ export class UsersController {
       next(err);
     }
   }
+
+  /**
+   * Updates an existing user identified by the :id route param and returns the updated safe DTO.
+   */
+  async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      const { username, fullName, role, isActive } = req.body;
+
+      const updatedUser = await this.usersService.updateUser(userId, { username, fullName, role, isActive });
+
+      res.status(200).json({
+        success: true,
+        data: updatedUser
+      });
+    } catch (err: any) {
+      next(err);
+    }
+  }
+
+  /**
+   * Soft-deletes (deactivates) the user identified by the :id route param.
+   */
+  async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+
+      await this.usersService.deleteUser(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'User deactivated successfully.'
+      });
+    } catch (err: any) {
+      next(err);
+    }
+  }
 }
