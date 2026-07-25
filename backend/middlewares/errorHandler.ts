@@ -5,6 +5,7 @@ import { ValidationError } from '../errors/ValidationError';
 import { AuthorizationError } from '../errors/AuthorizationError';
 import { AuthenticationError, ConfigurationError } from '../services/authService';
 import { UserRepositoryError } from '../repositories/userRepository';
+import { CategoryRepositoryError } from '../repositories/categoryRepository';
 
 /**
  * Global Error Handler middleware for Express.
@@ -38,6 +39,14 @@ export const errorHandler = (
     status = 403;
     message = err.message || 'Access denied.';
   } else if (err instanceof UserRepositoryError || err.name === 'UserRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof CategoryRepositoryError || err.name === 'CategoryRepositoryError') {
     // Database/Repository errors are masked for client security; details logged internally
     status = 500;
     message = 'Database operation failed.';

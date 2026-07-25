@@ -41,7 +41,8 @@ async function initSQLServerSchema(): Promise<void> {
         CategoryId INT IDENTITY(1,1) PRIMARY KEY,
         CategoryName NVARCHAR(100) NOT NULL UNIQUE,
         IsActive BIT NOT NULL DEFAULT 1,
-        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NULL
       );
     `);
 
@@ -229,6 +230,23 @@ async function initSQLServerSchema(): Promise<void> {
     logger.info('[Database] Full DDL execution complete.');
   } else {
     logger.info('[Database] SQL Server tables already exist.');
+  }
+
+  await ensureItemCategoriesUpdatedAtColumn();
+}
+
+/**
+ * Migration guard: adds the UpdatedAt column to ItemCategories for databases that were
+ * initialized before the column was introduced. Safe to run on every startup.
+ */
+async function ensureItemCategoriesUpdatedAtColumn(): Promise<void> {
+  const columnExists = await query(
+    "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ItemCategories' AND COLUMN_NAME = 'UpdatedAt'"
+  );
+
+  if (columnExists.length === 0) {
+    logger.info('[Database] Adding missing UpdatedAt column to ItemCategories table...');
+    await execute('ALTER TABLE ItemCategories ADD UpdatedAt DATETIME2 NULL;');
   }
 }
 

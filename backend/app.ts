@@ -9,6 +9,10 @@ import { createAuthRouter } from './routes/authRoutes';
 import { UsersService } from './services/usersService';
 import { UsersController } from './controllers/usersController';
 import { createUsersRouter } from './routes/usersRoutes';
+import { CategoryRepository } from './repositories/categoryRepository';
+import { CategoryService } from './services/categoryService';
+import { CategoryController } from './controllers/categoryController';
+import { createCategoryRouter } from './routes/categoryRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
@@ -23,6 +27,11 @@ const authController = new AuthController(authService);
 // Dependency chain for the users module
 const usersService = new UsersService(userRepository, authService);
 const usersController = new UsersController(usersService);
+
+// Dependency chain for the item categories module
+const categoryRepository = new CategoryRepository();
+const categoryService = new CategoryService(categoryRepository);
+const categoryController = new CategoryController(categoryService);
 
 // Standard middlewares
 app.use(cors());
@@ -66,8 +75,13 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  next();
+});
 app.use('/api/auth', createAuthRouter(authController));
 app.use('/api', createUsersRouter(usersController));
+app.use('/api', createCategoryRouter(categoryController));
 
 // We will mount other routes here (items, customers, rentals, dashboard) as we build them.
 
