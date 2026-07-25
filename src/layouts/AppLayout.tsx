@@ -21,6 +21,7 @@ import {
   Tag,
   Package,
   ClipboardList,
+  PackageCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { label: "Item Categories", to: "/categories", icon: Tag },
   { label: "Items", to: "/items", icon: Package },
   { label: "Rentals", to: "/rentals", icon: ClipboardList },
+  { label: "Returns", to: "/returns", icon: PackageCheck },
   { label: "Properties", to: "/properties", icon: Building },
   { label: "Tenants", to: "/tenants", icon: UserCheck },
   { label: "Payments", to: "/payments", icon: CreditCard },

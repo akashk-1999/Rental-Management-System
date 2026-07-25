@@ -25,6 +25,14 @@ import { CustomerRepository } from './repositories/customerRepository';
 import { CustomerService } from './services/customerService';
 import { CustomerController } from './controllers/customerController';
 import { createCustomerRouter } from './routes/customerRoutes';
+import { ReturnRepository } from './repositories/returnRepository';
+import { ReturnService } from './services/returnService';
+import { ReturnController } from './controllers/returnController';
+import { createReturnRouter } from './routes/returnRoutes';
+import { PaymentRepository } from './repositories/paymentRepository';
+import { PaymentService } from './services/paymentService';
+import { PaymentController } from './controllers/paymentController';
+import { createPaymentRouter } from './routes/paymentRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
@@ -59,6 +67,16 @@ const rentalController = new RentalController(rentalService);
 const customerRepository = new CustomerRepository();
 const customerService = new CustomerService(customerRepository);
 const customerController = new CustomerController(customerService);
+
+// Dependency chain for the returns module (Phase 1: Receiving Returned Items)
+const returnRepository = new ReturnRepository();
+const returnService = new ReturnService(returnRepository, rentalRepository);
+const returnController = new ReturnController(returnService);
+
+// Dependency chain for the payments module (Phase 1: Payment Recording & History)
+const paymentRepository = new PaymentRepository();
+const paymentService = new PaymentService(paymentRepository, rentalRepository);
+const paymentController = new PaymentController(paymentService);
 
 // Standard middlewares
 app.use(cors());
@@ -112,6 +130,8 @@ app.use('/api', createCategoryRouter(categoryController));
 app.use('/api', createItemRouter(itemController));
 app.use('/api', createRentalRouter(rentalController));
 app.use('/api', createCustomerRouter(customerController));
+app.use('/api', createReturnRouter(returnController));
+app.use('/api', createPaymentRouter(paymentController));
 
 // We will mount other routes here (properties, tenants, payments, dashboard) as we build them.
 

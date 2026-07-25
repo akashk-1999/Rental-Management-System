@@ -9,6 +9,8 @@ import Users from "../pages/Users";
 import Categories from "../pages/Categories";
 import Items from "../pages/Items";
 import Rentals from "../pages/Rentals";
+import Returns from "../pages/Returns";
+import Payments from "../pages/Payments";
 
 export default function AppRoutes() {
   return (
@@ -28,7 +30,9 @@ export default function AppRoutes() {
             <Route path="/categories" element={<Categories />} />
             <Route path="/items" element={<Items />} />
             <Route path="/rentals" element={<Rentals />} />
-            {/* Future protected pages: /properties, /tenants, /payments */}
+            <Route path="/returns" element={<Returns />} />
+            <Route path="/payments" element={<Payments />} />
+            {/* Future protected pages: /properties, /tenants */}
           </Route>
         </Route>
       </Routes>

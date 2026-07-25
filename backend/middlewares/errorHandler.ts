@@ -9,6 +9,8 @@ import { CategoryRepositoryError } from '../repositories/categoryRepository';
 import { ItemRepositoryError } from '../repositories/itemRepository';
 import { RentalRepositoryError } from '../repositories/rentalRepository';
 import { CustomerRepositoryError } from '../repositories/customerRepository';
+import { ReturnRepositoryError } from '../repositories/returnRepository';
+import { PaymentRepositoryError } from '../repositories/paymentRepository';
 
 /**
  * Global Error Handler middleware for Express.
@@ -74,6 +76,22 @@ export const errorHandler = (
       originalError: err.originalError
     });
   } else if (err instanceof CustomerRepositoryError || err.name === 'CustomerRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof ReturnRepositoryError || err.name === 'ReturnRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof PaymentRepositoryError || err.name === 'PaymentRepositoryError') {
     // Database/Repository errors are masked for client security; details logged internally
     status = 500;
     message = 'Database operation failed.';
