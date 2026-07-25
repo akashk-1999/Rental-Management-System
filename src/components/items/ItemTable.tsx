@@ -1,99 +1,108 @@
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Search, Filter, KeyRound } from "lucide-react";
+import { Pencil, Power, Search, Filter } from "lucide-react";
 import Table, { TableColumn } from "../common/Table";
-import { User } from "../../types/user";
+import { Item } from "../../types/item";
 
-interface UserTableProps {
-  users: User[];
-  onEdit?: (user: User) => void;
-  onDelete?: (user: User) => void;
-  onResetPassword?: (user: User) => void;
+interface ItemTableProps {
+  items: Item[];
+  onEdit?: (item: Item) => void;
+  onToggleStatus?: (item: Item) => void;
 }
 
-type RoleFilter = "All" | "Admin" | "Staff";
 type StatusFilter = "All" | "Active" | "Inactive";
 
-export default function UserTable({ users, onEdit, onDelete, onResetPassword }: UserTableProps) {
+function formatCurrency(value: number | null): string {
+  return value !== null ? `₹${value.toFixed(2)}` : "-";
+}
+
+export default function ItemTable({ items, onEdit, onToggleStatus }: ItemTableProps) {
   const [searchText, setSearchText] = useState("");
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>("All");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const filteredUsers = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return users.filter((user) => {
+    return items.filter((item) => {
       const matchesSearch =
         query === "" ||
-        user.username.toLowerCase().includes(query) ||
-        user.fullName.toLowerCase().includes(query) ||
-        user.role.toLowerCase().includes(query);
-
-      const matchesRole = roleFilter === "All" || user.role === roleFilter;
+        item.itemName.toLowerCase().includes(query) ||
+        item.categoryName.toLowerCase().includes(query) ||
+        (item.itemCode ?? "").toLowerCase().includes(query);
 
       const matchesStatus =
         statusFilter === "All" ||
-        (statusFilter === "Active" && user.isActive) ||
-        (statusFilter === "Inactive" && !user.isActive);
+        (statusFilter === "Active" && item.status === "Active") ||
+        (statusFilter === "Inactive" && item.status === "Inactive");
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
-  }, [users, searchText, roleFilter, statusFilter]);
+  }, [items, searchText, statusFilter]);
 
-  const isFilterActive = roleFilter !== "All" || statusFilter !== "All";
+  const isFilterActive = statusFilter !== "All";
 
-  const columns: TableColumn<User>[] = [
-    { key: "slNo", header: "Sl No.", align: "center", render: (_user, index) => index + 1 },
-    { key: "username", header: "Username" },
-    { key: "fullName", header: "Full Name" },
-    { key: "email", header: "Email", render: (user) => user.email || "-" },
-    { key: "contactNumber", header: "Contact Number", render: (user) => user.contactNumber || "-" },
-    { key: "role", header: "Role" },
+  const columns: TableColumn<Item>[] = [
+    { key: "slNo", header: "Sl No.", align: "center", render: (_item, index) => index + 1 },
+    { key: "itemName", header: "Item Name" },
+    { key: "categoryName", header: "Category" },
+    { key: "itemCode", header: "Item Code", align: "center", render: (item) => item.itemCode ?? "-" },
+    { key: "unitType", header: "Unit Type", align: "center" },
+    { key: "totalQuantity", header: "Total Quantity", align: "center" },
     {
-      key: "isActive",
-      header: "Status",
+      key: "rentalPrice",
+      header: "Rental Price",
       align: "center",
-      render: (user) => (user.isActive ? "Active" : "Inactive"),
+      render: (item) => formatCurrency(item.rentalPrice),
     },
     {
-      key: "passwordReset",
-      header: "Password Reset",
+      key: "securityDeposit",
+      header: "Security Deposit",
       align: "center",
-      render: (user) => (
-        <button
-          type="button"
-          onClick={() => onResetPassword?.(user)}
-          title="Reset Password"
-          aria-label={`Reset password for ${user.username}`}
-          className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-slate-400 dark:hover:text-indigo-400"
+      render: (item) => formatCurrency(item.securityDeposit),
+    },
+    {
+      key: "status",
+      header: "Status",
+      align: "center",
+      render: (item) => (
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+            item.status === "Active"
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+              : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+          }`}
         >
-          <KeyRound className="h-4 w-4" aria-hidden="true" />
-        </button>
+          {item.status}
+        </span>
       ),
     },
     {
       key: "actions",
       header: "Actions",
       align: "center",
-      render: (user) => (
+      render: (item) => (
         <div className="flex items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => onEdit?.(user)}
+            onClick={() => onEdit?.(item)}
             title="Edit"
-            aria-label={`Edit ${user.username}`}
+            aria-label={`Edit ${item.itemName}`}
             className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-slate-400 dark:hover:text-indigo-400"
           >
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
             type="button"
-            onClick={() => onDelete?.(user)}
-            title="Delete"
-            aria-label={`Delete ${user.username}`}
-            className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-slate-400 dark:hover:text-rose-400"
+            onClick={() => onToggleStatus?.(item)}
+            title={item.status === "Active" ? "Deactivate" : "Activate"}
+            aria-label={`${item.status === "Active" ? "Deactivate" : "Activate"} ${item.itemName}`}
+            className={`rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 focus:outline-none focus-visible:ring-2 dark:text-slate-400 ${
+              item.status === "Active"
+                ? "hover:text-rose-600 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                : "hover:text-emerald-600 focus-visible:ring-emerald-500 dark:hover:text-emerald-400"
+            }`}
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Power className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       ),
@@ -119,21 +128,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
           </button>
 
           {isFilterOpen && (
-            <div className="absolute left-0 z-10 mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800">
-              <div className="mb-3">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Role
-                </label>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-                >
-                  <option value="All">All</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Staff">Staff</option>
-                </select>
-              </div>
+            <div className="absolute left-0 z-10 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Status
@@ -161,7 +156,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
             type="text"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Search anything..."
+            placeholder="Search items..."
             className="w-full rounded-lg border border-indigo-200 bg-white py-1.5 pl-8 pr-3 text-sm text-slate-900 shadow-[0_0_0_3px_rgba(99,102,241,0.10),0_0_10px_rgba(99,102,241,0.25)] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-indigo-500/40 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
@@ -170,8 +165,8 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
       <div className="overflow-hidden rounded-b-2xl">
         <Table
           columns={columns}
-          data={filteredUsers}
-          emptyMessage="No users found. Click 'Add User' to create the first user."
+          data={filteredItems}
+          emptyMessage="No items found. Click 'Add Item' to create the first item."
         />
       </div>
     </div>

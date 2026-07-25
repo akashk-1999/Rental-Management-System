@@ -49,7 +49,7 @@ export default function Login() {
     try {
       const result = await loginRequest({ username, password });
       startSession(result.data.user, result.data.accessToken);
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err: any) {
       setFormError(extractErrorMessage(err));
     } finally {
@@ -58,8 +58,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="animate-blob absolute -top-32 -left-24 h-96 w-96 rounded-full bg-indigo-400/40 blur-3xl" />
+        <div className="animate-blob [animation-delay:6s] absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-teal-300/40 blur-3xl" />
+        <div className="animate-blob [animation-delay:12s] absolute -bottom-32 left-1/4 h-80 w-80 rounded-full bg-indigo-300/30 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 sm:p-10">
           <div className="flex flex-col items-center text-center mb-8">
             <div className="h-14 w-14 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl mb-4">

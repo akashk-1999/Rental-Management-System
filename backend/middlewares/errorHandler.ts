@@ -6,6 +6,9 @@ import { AuthorizationError } from '../errors/AuthorizationError';
 import { AuthenticationError, ConfigurationError } from '../services/authService';
 import { UserRepositoryError } from '../repositories/userRepository';
 import { CategoryRepositoryError } from '../repositories/categoryRepository';
+import { ItemRepositoryError } from '../repositories/itemRepository';
+import { RentalRepositoryError } from '../repositories/rentalRepository';
+import { CustomerRepositoryError } from '../repositories/customerRepository';
 
 /**
  * Global Error Handler middleware for Express.
@@ -47,6 +50,30 @@ export const errorHandler = (
       originalError: err.originalError
     });
   } else if (err instanceof CategoryRepositoryError || err.name === 'CategoryRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof ItemRepositoryError || err.name === 'ItemRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof RentalRepositoryError || err.name === 'RentalRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof CustomerRepositoryError || err.name === 'CustomerRepositoryError') {
     // Database/Repository errors are masked for client security; details logged internally
     status = 500;
     message = 'Database operation failed.';

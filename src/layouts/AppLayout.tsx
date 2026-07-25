@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Home,
+  Building,
   UserCheck,
   CreditCard,
   UserCircle,
@@ -17,14 +18,21 @@ import {
   PinOff,
   Sun,
   Moon,
+  Tag,
+  Package,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 
 const NAV_ITEMS = [
+  { label: "Home", to: "/home", icon: Home },
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Users", to: "/users", icon: Users },
-  { label: "Properties", to: "/properties", icon: Home },
+  { label: "Item Categories", to: "/categories", icon: Tag },
+  { label: "Items", to: "/items", icon: Package },
+  { label: "Rentals", to: "/rentals", icon: ClipboardList },
+  { label: "Properties", to: "/properties", icon: Building },
   { label: "Tenants", to: "/tenants", icon: UserCheck },
   { label: "Payments", to: "/payments", icon: CreditCard },
 ];
@@ -250,7 +258,7 @@ export default function AppLayout() {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
+        <header className="relative z-20 flex h-16 flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -317,7 +325,7 @@ export default function AppLayout() {
                 role="menu"
                 aria-labelledby="profile-menu-trigger"
                 onKeyDown={handleMenuKeyDown}
-                className="absolute right-0 mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+                className="absolute right-0 z-30 mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
               >
                 <button
                   type="button"

@@ -92,8 +92,8 @@ async function initSQLServerSchema(): Promise<void> {
         RentalId INT IDENTITY(1,1) PRIMARY KEY,
         RentalCode NVARCHAR(20) NOT NULL UNIQUE,
         CustomerId INT NOT NULL FOREIGN KEY REFERENCES Customers(CustomerId),
-        RentalStartDate DATE NOT NULL,
-        ExpectedReturnDate DATE NOT NULL,
+        RentalStartDate DATETIME2 NOT NULL,
+        ExpectedReturnDate DATETIME2 NOT NULL,
         Status NVARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (Status IN ('Active','PartialReturn','Returned','Overdue','Cancelled')),
         TotalAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
         AdvancePaid DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -233,6 +233,7 @@ async function initSQLServerSchema(): Promise<void> {
   }
 
   await ensureItemCategoriesUpdatedAtColumn();
+  await ensureRentalDateTimeColumns();
 }
 
 /**
@@ -247,6 +248,46 @@ async function ensureItemCategoriesUpdatedAtColumn(): Promise<void> {
   if (columnExists.length === 0) {
     logger.info('[Database] Adding missing UpdatedAt column to ItemCategories table...');
     await execute('ALTER TABLE ItemCategories ADD UpdatedAt DATETIME2 NULL;');
+  }
+}
+
+/**
+ * Migration guard: widens Rentals.RentalStartDate and Rentals.ExpectedReturnDate from DATE to
+ * DATETIME2 for databases initialized before rental time-of-day tracking was introduced. Widening
+ * a DATE column to DATETIME2 is a safe, lossless conversion (existing values keep midnight as
+ * their time component). Safe to run on every startup.
+ */
+async function ensureRentalDateTimeColumns(): Promise<void> {
+  const columns = await query<{ COLUMN_NAME: string; DATA_TYPE: string }>(
+    "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Rentals' AND COLUMN_NAME IN ('RentalStartDate', 'ExpectedReturnDate')"
+  );
+
+  const rentalStartDateIsDate = columns.some(
+    (c) => c.COLUMN_NAME === 'RentalStartDate' && c.DATA_TYPE.toLowerCase() === 'date'
+  );
+  const expectedReturnDateIsDate = columns.some(
+    (c) => c.COLUMN_NAME === 'ExpectedReturnDate' && c.DATA_TYPE.toLowerCase() === 'date'
+  );
+
+  if (!rentalStartDateIsDate && !expectedReturnDateIsDate) {
+    return;
+  }
+
+  logger.info('[Database] Upgrading Rentals date columns from DATE to DATETIME2...');
+
+  if (rentalStartDateIsDate) {
+    await execute('ALTER TABLE Rentals ALTER COLUMN RentalStartDate DATETIME2 NOT NULL;');
+  }
+
+  if (expectedReturnDateIsDate) {
+    // IX_Rentals_ExpectedReturnDate indexes this column directly, which blocks widening it in
+    // place; drop it first and recreate it afterward.
+    await execute(`
+      IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Rentals_ExpectedReturnDate' AND object_id = OBJECT_ID('Rentals'))
+        DROP INDEX IX_Rentals_ExpectedReturnDate ON Rentals;
+    `);
+    await execute('ALTER TABLE Rentals ALTER COLUMN ExpectedReturnDate DATETIME2 NOT NULL;');
+    await execute('CREATE INDEX IX_Rentals_ExpectedReturnDate ON Rentals(ExpectedReturnDate);');
   }
 }
 

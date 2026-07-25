@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import WalletLoader from "./WalletLoader";
 
 interface LoadingSpinnerProps {
   label?: string;
@@ -7,8 +7,8 @@ interface LoadingSpinnerProps {
 
 export default function LoadingSpinner({ label = "Loading...", className = "" }: LoadingSpinnerProps) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-2 py-12 text-slate-500 dark:text-slate-400 ${className}`}>
-      <Loader2 className="h-6 w-6 animate-spin text-indigo-600" aria-hidden="true" />
+    <div className={`flex min-h-[60vh] flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400 ${className}`}>
+      <WalletLoader scale={0.7} />
       {label && <span className="text-sm">{label}</span>}
     </div>
   );

@@ -6,6 +6,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import Modal from "../components/common/Modal";
 import UserForm, { UserFormValues } from "../components/users/UserForm";
 import DeleteUserDialog from "../components/users/DeleteUserDialog";
+import ResetPasswordDialog from "../components/users/ResetPasswordDialog";
 import { usersApi } from "../api/usersApi";
 import { User } from "../types/user";
 import { useToast } from "../context/ToastContext";
@@ -27,6 +28,11 @@ export default function Users() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -129,6 +135,36 @@ export default function Users() {
     }
   };
 
+  const handleResetPassword = (user: User) => {
+    setUserToResetPassword(user);
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const closeResetPasswordDialog = () => {
+    setIsResetPasswordDialogOpen(false);
+    setUserToResetPassword(null);
+    setResetPasswordError(null);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (!userToResetPassword) {
+      return;
+    }
+
+    setIsResettingPassword(true);
+    setResetPasswordError(null);
+    try {
+      await usersApi.resetPassword(userToResetPassword.userId);
+      closeResetPasswordDialog();
+      showToast("Password reset to the default password successfully.");
+    } catch (err) {
+      console.error(err);
+      setResetPasswordError("Failed to reset password. Please try again.");
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -152,7 +188,12 @@ export default function Users() {
           {error}
         </div>
       ) : (
-        <UserTable users={users} onEdit={handleEditUser} onDelete={handleDeleteUser} />
+        <UserTable
+          users={users}
+          onEdit={handleEditUser}
+          onDelete={handleDeleteUser}
+          onResetPassword={handleResetPassword}
+        />
       )}
 
       <Modal
@@ -204,6 +245,15 @@ export default function Users() {
         error={submitError}
         onCancel={closeDeleteDialog}
         onConfirm={handleConfirmDelete}
+      />
+
+      <ResetPasswordDialog
+        isOpen={isResetPasswordDialogOpen}
+        user={userToResetPassword}
+        loading={isResettingPassword}
+        error={resetPasswordError}
+        onCancel={closeResetPasswordDialog}
+        onConfirm={handleConfirmResetPassword}
       />
     </div>
   );

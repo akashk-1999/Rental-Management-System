@@ -56,5 +56,16 @@ export function createUsersRouter(usersController: UsersController): Router {
     usersController.deleteUser.bind(usersController)
   );
 
+  /**
+   * POST /users/:id/reset-password
+   * 1. JWT Authentication Middleware
+   * 2. UsersController.resetPassword
+   */
+  router.post(
+    '/users/:id/reset-password',
+    authenticateToken,
+    usersController.resetPassword.bind(usersController)
+  );
+
   return router;
 }

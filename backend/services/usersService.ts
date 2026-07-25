@@ -4,6 +4,7 @@ import { AuthService } from './authService';
 import { HttpError } from '../errors/HttpError';
 
 const ALLOWED_ROLES = ['Admin', 'Staff'] as const;
+const DEFAULT_RESET_PASSWORD = '123456';
 
 // --- Types & Interfaces ---
 
@@ -161,5 +162,20 @@ export class UsersService {
 
     await this.userRepository.disableUser(userId);
     logger.info(`[UsersService.deleteUser] Deactivated user: ${userId} (${existingUser.Username}).`);
+  }
+
+  /**
+   * Resets a user's password back to the system default, hashed via the shared AuthService.
+   */
+  async resetPassword(userId: number): Promise<void> {
+    const existingUser = await this.userRepository.getUserById(userId);
+    if (!existingUser) {
+      logger.warn(`[UsersService.resetPassword] Failed to reset password: User with ID ${userId} not found.`);
+      throw new HttpError(404, 'User not found');
+    }
+
+    const passwordHash = await this.authService.hashPassword(DEFAULT_RESET_PASSWORD);
+    await this.userRepository.resetPassword(userId, passwordHash);
+    logger.info(`[UsersService.resetPassword] Reset password for user: ${userId} (${existingUser.Username}).`);
   }
 }

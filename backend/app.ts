@@ -13,6 +13,18 @@ import { CategoryRepository } from './repositories/categoryRepository';
 import { CategoryService } from './services/categoryService';
 import { CategoryController } from './controllers/categoryController';
 import { createCategoryRouter } from './routes/categoryRoutes';
+import { ItemRepository } from './repositories/itemRepository';
+import { ItemService } from './services/itemService';
+import { ItemController } from './controllers/itemController';
+import { createItemRouter } from './routes/itemRoutes';
+import { RentalRepository } from './repositories/rentalRepository';
+import { RentalService } from './services/rentalService';
+import { RentalController } from './controllers/rentalController';
+import { createRentalRouter } from './routes/rentalRoutes';
+import { CustomerRepository } from './repositories/customerRepository';
+import { CustomerService } from './services/customerService';
+import { CustomerController } from './controllers/customerController';
+import { createCustomerRouter } from './routes/customerRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
@@ -32,6 +44,21 @@ const usersController = new UsersController(usersService);
 const categoryRepository = new CategoryRepository();
 const categoryService = new CategoryService(categoryRepository);
 const categoryController = new CategoryController(categoryService);
+
+// Dependency chain for the items module
+const itemRepository = new ItemRepository();
+const itemService = new ItemService(itemRepository, categoryRepository);
+const itemController = new ItemController(itemService);
+
+// Dependency chain for the rentals module (Phase 1: Rental Creation)
+const rentalRepository = new RentalRepository();
+const rentalService = new RentalService(rentalRepository, itemRepository);
+const rentalController = new RentalController(rentalService);
+
+// Dependency chain for the lightweight customer lookup (used by the Rentals creation form only)
+const customerRepository = new CustomerRepository();
+const customerService = new CustomerService(customerRepository);
+const customerController = new CustomerController(customerService);
 
 // Standard middlewares
 app.use(cors());
@@ -82,8 +109,11 @@ app.use((req, res, next) => {
 app.use('/api/auth', createAuthRouter(authController));
 app.use('/api', createUsersRouter(usersController));
 app.use('/api', createCategoryRouter(categoryController));
+app.use('/api', createItemRouter(itemController));
+app.use('/api', createRentalRouter(rentalController));
+app.use('/api', createCustomerRouter(customerController));
 
-// We will mount other routes here (items, customers, rentals, dashboard) as we build them.
+// We will mount other routes here (properties, tenants, payments, dashboard) as we build them.
 
 // Global Error Handler Middleware
 app.use(errorHandler);

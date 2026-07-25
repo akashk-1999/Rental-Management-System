@@ -96,4 +96,22 @@ export class UsersController {
       next(err);
     }
   }
+
+  /**
+   * Resets the password of the user identified by the :id route param to the system default.
+   */
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+
+      await this.usersService.resetPassword(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Password reset successfully.'
+      });
+    } catch (err: any) {
+      next(err);
+    }
+  }
 }

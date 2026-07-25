@@ -53,9 +53,14 @@ async function deleteUser(userId: number): Promise<void> {
   await apiClient.delete(`/users/${userId}`);
 }
 
+async function resetPassword(userId: number): Promise<void> {
+  await apiClient.post(`/users/${userId}/reset-password`);
+}
+
 export const usersApi = {
   getUsers,
   createUser,
   updateUser,
   deleteUser,
+  resetPassword,
 };

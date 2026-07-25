@@ -2,15 +2,23 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 
+type ModalSize = "md" | "lg";
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   subtitle?: string;
+  size?: ModalSize;
   children: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, title, subtitle, children }: ModalProps) {
+const SIZE_CLASSES: Record<ModalSize, string> = {
+  md: "max-w-md",
+  lg: "max-w-3xl",
+};
+
+export default function Modal({ isOpen, onClose, title, subtitle, size = "md", children }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -27,13 +35,13 @@ export default function Modal({ isOpen, onClose, title, subtitle, children }: Mo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700/60 dark:bg-slate-900"
+        className={`relative my-8 flex max-h-[calc(100dvh-4rem)] w-full ${SIZE_CLASSES[size]} flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700/60 dark:bg-slate-900 sm:my-0 sm:max-h-[calc(100dvh-2rem)]`}
       >
         {title && (
           <div className="flex flex-shrink-0 items-center justify-between border-b border-amber-200 bg-gradient-to-r from-amber-100 via-amber-200 to-amber-50 px-6 py-3 dark:border-amber-500/20 dark:from-amber-500/10 dark:via-amber-500/20 dark:to-amber-500/10">
