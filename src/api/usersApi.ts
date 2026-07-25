@@ -11,6 +11,8 @@ interface CreateUserRequest {
   password: string;
   fullName: string;
   role: "Admin" | "Staff";
+  email: string | null;
+  contactNumber: string | null;
 }
 
 interface CreateUserResponse {
@@ -23,6 +25,8 @@ interface UpdateUserRequest {
   fullName: string;
   role: "Admin" | "Staff";
   isActive: boolean;
+  email: string | null;
+  contactNumber: string | null;
 }
 
 interface UpdateUserResponse {

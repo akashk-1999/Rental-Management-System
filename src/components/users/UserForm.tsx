@@ -10,6 +10,8 @@ export interface UserFormValues {
   fullName: string;
   role: "Admin" | "Staff";
   isActive: boolean;
+  email: string;
+  contactNumber: string;
 }
 
 interface UserFormProps {
@@ -25,6 +27,8 @@ const DEFAULT_VALUES: UserFormValues = {
   fullName: "",
   role: "Staff",
   isActive: true,
+  email: "",
+  contactNumber: "",
 };
 
 export default function UserForm({
@@ -78,6 +82,26 @@ export default function UserForm({
         required
       />
 
+      <Input
+        id="email"
+        label="Email"
+        type="email"
+        value={values.email}
+        onChange={(e) => handleChange("email", e.target.value)}
+        disabled={loading}
+        placeholder="Enter email address"
+      />
+
+      <Input
+        id="contactNumber"
+        label="Contact Number"
+        type="tel"
+        value={values.contactNumber}
+        onChange={(e) => handleChange("contactNumber", e.target.value)}
+        disabled={loading}
+        placeholder="Enter contact number"
+      />
+
       {mode === "create" && (
         <Input
           id="password"
@@ -92,7 +116,7 @@ export default function UserForm({
       )}
 
       <div>
-        <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">
           Role
           <span className="ml-0.5 text-rose-500">*</span>
         </label>
@@ -101,7 +125,7 @@ export default function UserForm({
           value={values.role}
           onChange={(e) => handleChange("role", e.target.value as UserFormValues["role"])}
           disabled={loading}
-          className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+          className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-700"
         >
           <option value="Admin">Admin</option>
           <option value="Staff">Staff</option>
@@ -115,9 +139,9 @@ export default function UserForm({
           checked={values.isActive}
           onChange={(e) => handleChange("isActive", e.target.checked)}
           disabled={loading}
-          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
+          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800"
         />
-        <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
+        <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Active
         </label>
       </div>

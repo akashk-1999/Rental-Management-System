@@ -48,18 +48,21 @@ export default function ConfirmDeleteModal({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
+      <div className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100 dark:border-slate-700 dark:divide-slate-700">
         {details.map((item) => (
-          <div key={item.label} className="flex items-center justify-between bg-slate-50/60 px-4 py-2.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <div
+            key={item.label}
+            className="flex items-center justify-between bg-slate-50/60 px-4 py-2.5 dark:bg-slate-800/40"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {item.label}
             </span>
-            <span className="text-sm font-medium text-slate-800">{item.value}</span>
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{item.value}</span>
           </div>
         ))}
       </div>

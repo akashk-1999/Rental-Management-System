@@ -130,11 +130,11 @@ export default function Users() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Users</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage system users</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-white">Users</h1>
+          <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">Manage system users</p>
         </div>
         <Button
           variant="accent"
@@ -148,7 +148,7 @@ export default function Users() {
       {loading ? (
         <LoadingSpinner label="Loading users..." />
       ) : error ? (
-        <div className="rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3">
+        <div className="rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </div>
       ) : (
@@ -162,7 +162,7 @@ export default function Users() {
         subtitle="Fill in the details to create a new user account"
       >
         {submitError && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3">
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
             {submitError}
           </div>
         )}
@@ -176,7 +176,7 @@ export default function Users() {
         subtitle="Update the selected user's details"
       >
         {submitError && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3">
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
             {submitError}
           </div>
         )}
@@ -189,6 +189,8 @@ export default function Users() {
               username: selectedUser.username,
               role: selectedUser.role as "Admin" | "Staff",
               isActive: selectedUser.isActive,
+              email: selectedUser.email ?? "",
+              contactNumber: selectedUser.contactNumber ?? "",
             }}
             onSubmit={handleUpdateUser}
           />

@@ -13,6 +13,8 @@ export interface SafeUser {
   fullName: string;
   role: 'Admin' | 'Staff';
   isActive: boolean;
+  email: string | null;
+  contactNumber: string | null;
 }
 
 export interface CreateUserInput {
@@ -20,6 +22,8 @@ export interface CreateUserInput {
   password: string;
   fullName: string;
   role: 'Admin' | 'Staff';
+  email?: string | null;
+  contactNumber?: string | null;
 }
 
 export interface UpdateUserInput {
@@ -27,6 +31,8 @@ export interface UpdateUserInput {
   fullName: string;
   role: 'Admin' | 'Staff';
   isActive: boolean;
+  email?: string | null;
+  contactNumber?: string | null;
 }
 
 // --- UsersService Implementation ---
@@ -54,6 +60,8 @@ export class UsersService {
     fullName: user.FullName,
     role: user.Role,
     isActive: user.IsActive,
+    email: user.Email,
+    contactNumber: user.ContactNumber,
   };
   }
 
@@ -89,7 +97,9 @@ export class UsersService {
       Username: input.username,
       PasswordHash: passwordHash,
       FullName: input.fullName,
-      Role: input.role
+      Role: input.role,
+      Email: input.email ?? null,
+      ContactNumber: input.contactNumber ?? null
     });
 
     logger.info(`[UsersService.createUser] Created new user: ${createdUser.UserId} (${createdUser.Username}).`);
@@ -124,7 +134,9 @@ export class UsersService {
       Username: input.username,
       FullName: input.fullName,
       Role: input.role,
-      IsActive: input.isActive
+      IsActive: input.isActive,
+      Email: input.email ?? null,
+      ContactNumber: input.contactNumber ?? null
     });
 
     const updatedUser = await this.userRepository.getUserById(userId);

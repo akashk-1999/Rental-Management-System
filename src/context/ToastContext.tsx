@@ -69,16 +69,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 className={`absolute -inset-1 rounded-2xl bg-gradient-to-r ${GLOW_STYLES[toast.type]} opacity-70 blur-md`}
                 aria-hidden="true"
               />
-              <div className="relative flex items-start gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-lg">
+              <div className="relative flex items-start gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                 <span className={`mt-0.5 flex-shrink-0 ${ICON_COLORS[toast.type]}`}>
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <p className="flex-1 pt-0.5 text-sm font-semibold text-slate-800">{toast.message}</p>
+                <p className="flex-1 pt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">{toast.message}</p>
                 <button
                   type="button"
                   onClick={() => dismissToast(toast.id)}
                   aria-label="Dismiss notification"
-                  className="rounded-lg p-1 text-slate-400 transition-colors duration-150 ease-in-out hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="rounded-lg p-1 text-slate-400 transition-colors duration-150 ease-in-out hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>

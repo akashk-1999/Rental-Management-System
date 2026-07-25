@@ -33,9 +33,16 @@ export class UsersController {
    */
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { username, password, fullName, role } = req.body;
+      const { username, password, fullName, role, email, contactNumber } = req.body;
 
-      const createdUser = await this.usersService.createUser({ username, password, fullName, role });
+      const createdUser = await this.usersService.createUser({
+        username,
+        password,
+        fullName,
+        role,
+        email,
+        contactNumber
+      });
 
       res.status(201).json({
         success: true,
@@ -52,9 +59,16 @@ export class UsersController {
   async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = parseInt(req.params.id, 10);
-      const { username, fullName, role, isActive } = req.body;
+      const { username, fullName, role, isActive, email, contactNumber } = req.body;
 
-      const updatedUser = await this.usersService.updateUser(userId, { username, fullName, role, isActive });
+      const updatedUser = await this.usersService.updateUser(userId, {
+        username,
+        fullName,
+        role,
+        isActive,
+        email,
+        contactNumber
+      });
 
       res.status(200).json({
         success: true,

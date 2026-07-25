@@ -8,6 +8,8 @@ export interface User {
   FullName: string;
   Role: 'Admin' | 'Staff';
   IsActive: boolean;
+  Email: string | null;
+  ContactNumber: string | null;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -26,17 +28,17 @@ export class UserRepositoryError extends Error {
 export class UserRepository {
   /**
    * Retrieves a single user record by their unique integer primary key (UserId).
-   * 
+   *
    * SQL Query:
-   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
    * FROM Users
    * WHERE UserId = @UserId
    */
   static async getUserById(id: number): Promise<User | null> {
     try {
       const rows = await query<User>(
-        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
-         FROM Users 
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
+         FROM Users
          WHERE UserId = @UserId`,
         { UserId: id }
       );
@@ -72,9 +74,9 @@ export class UserRepository {
 
   /**
    * Retrieves all active user records from the Users table, ordered alphabetically by FullName.
-   * 
+   *
    * SQL Query:
-   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+   * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
    * FROM Users
    * WHERE IsActive = 1
    * ORDER BY FullName ASC
@@ -82,9 +84,9 @@ export class UserRepository {
   static async getAllUsers(): Promise<User[]> {
     try {
       const rows = await query<User>(
-        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
-         FROM Users 
-         WHERE IsActive = 1 
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
+         FROM Users
+         WHERE IsActive = 1
          ORDER BY FullName ASC`
       );
       return rows;
@@ -97,23 +99,25 @@ export class UserRepository {
   /**
    * Inserts a new user record into the Users table and returns the fully initialized entity.
    * Leverages SQL Server's OUTPUT clause for atomic creation and field retrieval in a single query.
-   * 
+   *
    * SQL Query:
-   * INSERT INTO Users (Username, PasswordHash, FullName, Role, IsActive)
-   * OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.CreatedAt, INSERTED.UpdatedAt
-   * VALUES (@Username, @PasswordHash, @FullName, @Role, 1)
+   * INSERT INTO Users (Username, PasswordHash, FullName, Role, Email, ContactNumber, IsActive)
+   * OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.Email, INSERTED.ContactNumber, INSERTED.CreatedAt, INSERTED.UpdatedAt
+   * VALUES (@Username, @PasswordHash, @FullName, @Role, @Email, @ContactNumber, 1)
    */
   static async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive'>): Promise<User> {
     try {
       const rows = await query<User>(
-        `INSERT INTO Users (Username, PasswordHash, FullName, Role, IsActive)
-         OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.CreatedAt, INSERTED.UpdatedAt
-         VALUES (@Username, @PasswordHash, @FullName, @Role, 1)`,
+        `INSERT INTO Users (Username, PasswordHash, FullName, Role, Email, ContactNumber, IsActive)
+         OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.Email, INSERTED.ContactNumber, INSERTED.CreatedAt, INSERTED.UpdatedAt
+         VALUES (@Username, @PasswordHash, @FullName, @Role, @Email, @ContactNumber, 1)`,
         {
           Username: user.Username,
           PasswordHash: user.PasswordHash,
           FullName: user.FullName,
-          Role: user.Role
+          Role: user.Role,
+          Email: user.Email,
+          ContactNumber: user.ContactNumber
         }
       );
       
@@ -134,8 +138,9 @@ export class UserRepository {
   }
 
   /**
-   * Updates mutable attributes (Username, FullName, Role, IsActive) of an existing user and timestamps the change.
-   * Checks existence first to distinguish between 'User not found' and a successful update without treating unchanged values as an error.
+   * Updates mutable attributes (Username, FullName, Role, IsActive, Email, ContactNumber) of an existing
+   * user and timestamps the change. Checks existence first to distinguish between 'User not found' and
+   * a successful update without treating unchanged values as an error.
    *
    * SQL Query:
    * UPDATE Users
@@ -143,10 +148,14 @@ export class UserRepository {
    *     FullName = @FullName,
    *     Role = @Role,
    *     IsActive = @IsActive,
+   *     Email = @Email,
+   *     ContactNumber = @ContactNumber,
    *     UpdatedAt = SYSUTCDATETIME()
    * WHERE UserId = @UserId
    */
-  static async updateUser(user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+  static async updateUser(
+    user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive' | 'Email' | 'ContactNumber'>
+  ): Promise<void> {
     try {
       // Pre-check user existence to distinguish "not found" vs "successful update"
       const existingUser = await UserRepository.getUserById(user.UserId);
@@ -160,6 +169,8 @@ export class UserRepository {
              FullName = @FullName,
              Role = @Role,
              IsActive = @IsActive,
+             Email = @Email,
+             ContactNumber = @ContactNumber,
              UpdatedAt = SYSUTCDATETIME()
          WHERE UserId = @UserId`,
         {
@@ -167,7 +178,9 @@ export class UserRepository {
           Username: user.Username,
           FullName: user.FullName,
           Role: user.Role,
-          IsActive: user.IsActive ? 1 : 0
+          IsActive: user.IsActive ? 1 : 0,
+          Email: user.Email,
+          ContactNumber: user.ContactNumber
         }
       );
     } catch (err: any) {
@@ -257,7 +270,9 @@ export class UserRepository {
     return UserRepository.createUser(user);
   }
 
-  async updateUser(user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive'>): Promise<void> {
+  async updateUser(
+    user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive' | 'Email' | 'ContactNumber'>
+  ): Promise<void> {
     return UserRepository.updateUser(user);
   }
 
