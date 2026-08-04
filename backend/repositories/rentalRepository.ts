@@ -80,14 +80,14 @@ export class RentalRepository {
    * SQL Query:
    * SELECT CustomerId, CustomerName, MobileNumber, AlternateNumber, Address, IdProof, Notes, CreatedAt, UpdatedAt
    * FROM Customers
-   * WHERE MobileNumber = @MobileNumber
+   * WHERE MobileNumber = @MobileNumber AND DeleteStatus = 0
    */
   static async getCustomerByMobileNumber(mobileNumber: string): Promise<Customer | null> {
     try {
       const rows = await query<Customer>(
         `SELECT CustomerId, CustomerName, MobileNumber, AlternateNumber, Address, IdProof, Notes, CreatedAt, UpdatedAt
          FROM Customers
-         WHERE MobileNumber = @MobileNumber`,
+         WHERE MobileNumber = @MobileNumber AND DeleteStatus = 0`,
         { MobileNumber: mobileNumber }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -108,6 +108,7 @@ export class RentalRepository {
    *        r.SecurityDepositPaid, r.PaymentStatus, r.Notes, r.CreatedByUserId, r.CreatedAt, r.UpdatedAt
    * FROM Rentals r
    * JOIN Customers c ON c.CustomerId = r.CustomerId
+   * WHERE r.DeleteStatus = 0 AND c.DeleteStatus = 0
    * ORDER BY r.RentalId DESC
    */
   static async getAllRentals(): Promise<RentalWithCustomer[]> {
@@ -118,6 +119,7 @@ export class RentalRepository {
                 r.SecurityDepositPaid, r.PaymentStatus, r.Notes, r.CreatedByUserId, r.CreatedAt, r.UpdatedAt
          FROM Rentals r
          JOIN Customers c ON c.CustomerId = r.CustomerId
+         WHERE r.DeleteStatus = 0 AND c.DeleteStatus = 0
          ORDER BY r.RentalId DESC`
       );
       return rows;
@@ -136,7 +138,7 @@ export class RentalRepository {
    *        r.SecurityDepositPaid, r.PaymentStatus, r.Notes, r.CreatedByUserId, r.CreatedAt, r.UpdatedAt
    * FROM Rentals r
    * JOIN Customers c ON c.CustomerId = r.CustomerId
-   * WHERE r.RentalId = @RentalId
+   * WHERE r.RentalId = @RentalId AND r.DeleteStatus = 0 AND c.DeleteStatus = 0
    */
   static async getRentalById(id: number): Promise<RentalWithCustomer | null> {
     try {
@@ -146,7 +148,7 @@ export class RentalRepository {
                 r.SecurityDepositPaid, r.PaymentStatus, r.Notes, r.CreatedByUserId, r.CreatedAt, r.UpdatedAt
          FROM Rentals r
          JOIN Customers c ON c.CustomerId = r.CustomerId
-         WHERE r.RentalId = @RentalId`,
+         WHERE r.RentalId = @RentalId AND r.DeleteStatus = 0 AND c.DeleteStatus = 0`,
         { RentalId: id }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -164,7 +166,7 @@ export class RentalRepository {
    *        rli.QuantityRented, rli.UnitPrice, rli.LineTotal, rli.CreatedAt
    * FROM RentalLineItems rli
    * JOIN Items i ON i.ItemId = rli.ItemId
-   * WHERE rli.RentalId = @RentalId
+   * WHERE rli.RentalId = @RentalId AND rli.DeleteStatus = 0 AND i.DeleteStatus = 0
    * ORDER BY rli.RentalLineItemId ASC
    */
   static async getRentalLineItems(rentalId: number): Promise<RentalLineItemWithItem[]> {
@@ -174,7 +176,7 @@ export class RentalRepository {
                 rli.QuantityRented, rli.UnitPrice, rli.LineTotal, rli.CreatedAt
          FROM RentalLineItems rli
          JOIN Items i ON i.ItemId = rli.ItemId
-         WHERE rli.RentalId = @RentalId
+         WHERE rli.RentalId = @RentalId AND rli.DeleteStatus = 0 AND i.DeleteStatus = 0
          ORDER BY rli.RentalLineItemId ASC`,
         { RentalId: rentalId }
       );
@@ -236,7 +238,10 @@ export class RentalRepository {
 
         // Generate a sequential, year-wise rental code (e.g. RN-2026-0001), counting existing
         // codes for the current year. WITH (UPDLOCK, HOLDLOCK) prevents two concurrent
-        // transactions from computing the same next sequence number.
+        // transactions from computing the same next sequence number. Deliberately NOT filtered
+        // by DeleteStatus: RentalCode is UNIQUE across all rows regardless of soft-delete state,
+        // so a soft-deleted rental's code still occupies that slot and must still be counted to
+        // avoid generating a colliding duplicate.
         const year = new Date().getUTCFullYear();
         const codePattern = `RN-${year}-%`;
         const countResult = await txRequest(tx, { CodePattern: codePattern }).query<{ RentalCount: number }>(

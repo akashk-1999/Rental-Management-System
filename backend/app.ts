@@ -33,6 +33,14 @@ import { PaymentRepository } from './repositories/paymentRepository';
 import { PaymentService } from './services/paymentService';
 import { PaymentController } from './controllers/paymentController';
 import { createPaymentRouter } from './routes/paymentRoutes';
+import { DashboardRepository } from './repositories/dashboardRepository';
+import { DashboardService } from './services/dashboardService';
+import { DashboardController } from './controllers/dashboardController';
+import { createDashboardRouter } from './routes/dashboardRoutes';
+import { ReportRepository } from './repositories/reportRepository';
+import { ReportService } from './services/reportService';
+import { ReportController } from './controllers/reportController';
+import { createReportRouter } from './routes/reportRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
@@ -77,6 +85,16 @@ const returnController = new ReturnController(returnService);
 const paymentRepository = new PaymentRepository();
 const paymentService = new PaymentService(paymentRepository, rentalRepository);
 const paymentController = new PaymentController(paymentService);
+
+// Dependency chain for the dashboard module (read-only business overview)
+const dashboardRepository = new DashboardRepository();
+const dashboardService = new DashboardService(dashboardRepository);
+const dashboardController = new DashboardController(dashboardService);
+
+// Dependency chain for the reports module (read-only, filterable reports)
+const reportRepository = new ReportRepository();
+const reportService = new ReportService(reportRepository);
+const reportController = new ReportController(reportService);
 
 // Standard middlewares
 app.use(cors());
@@ -132,6 +150,8 @@ app.use('/api', createRentalRouter(rentalController));
 app.use('/api', createCustomerRouter(customerController));
 app.use('/api', createReturnRouter(returnController));
 app.use('/api', createPaymentRouter(paymentController));
+app.use('/api', createDashboardRouter(dashboardController));
+app.use('/api', createReportRouter(reportController));
 
 // We will mount other routes here (properties, tenants, payments, dashboard) as we build them.
 

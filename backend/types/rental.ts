@@ -9,6 +9,7 @@ export interface Customer {
   Address: string | null;
   IdProof: string | null;
   Notes: string | null;
+  DeleteStatus: boolean;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -26,6 +27,7 @@ export interface Rental {
   PaymentStatus: RentalPaymentStatus;
   Notes: string | null;
   CreatedByUserId: number;
+  DeleteStatus: boolean;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -37,6 +39,7 @@ export interface RentalLineItem {
   QuantityRented: number;
   UnitPrice: number;
   LineTotal: number;
+  DeleteStatus: boolean;
   CreatedAt: Date;
 }
 

@@ -9,8 +9,9 @@ import { CategoryRepositoryError } from '../repositories/categoryRepository';
 import { ItemRepositoryError } from '../repositories/itemRepository';
 import { RentalRepositoryError } from '../repositories/rentalRepository';
 import { CustomerRepositoryError } from '../repositories/customerRepository';
-import { ReturnRepositoryError } from '../repositories/returnRepository';
-import { PaymentRepositoryError } from '../repositories/paymentRepository';
+import { ReturnRepositoryError, ReturnQuantityExceededError } from '../repositories/returnRepository';
+import { PaymentRepositoryError, PaymentAmountExceedsBalanceError } from '../repositories/paymentRepository';
+import { DashboardRepositoryError } from '../repositories/dashboardRepository';
 
 /**
  * Global Error Handler middleware for Express.
@@ -83,6 +84,9 @@ export const errorHandler = (
       stack: err.stack,
       originalError: err.originalError
     });
+  } else if (err instanceof ReturnQuantityExceededError || err.name === 'ReturnQuantityExceededError') {
+    status = 409;
+    message = err.message;
   } else if (err instanceof ReturnRepositoryError || err.name === 'ReturnRepositoryError') {
     // Database/Repository errors are masked for client security; details logged internally
     status = 500;
@@ -91,7 +95,18 @@ export const errorHandler = (
       stack: err.stack,
       originalError: err.originalError
     });
+  } else if (err instanceof PaymentAmountExceedsBalanceError || err.name === 'PaymentAmountExceedsBalanceError') {
+    status = 409;
+    message = err.message;
   } else if (err instanceof PaymentRepositoryError || err.name === 'PaymentRepositoryError') {
+    // Database/Repository errors are masked for client security; details logged internally
+    status = 500;
+    message = 'Database operation failed.';
+    logger.error(`[ErrorHandler] Repository error: ${err.message}`, {
+      stack: err.stack,
+      originalError: err.originalError
+    });
+  } else if (err instanceof DashboardRepositoryError || err.name === 'DashboardRepositoryError') {
     // Database/Repository errors are masked for client security; details logged internally
     status = 500;
     message = 'Database operation failed.';

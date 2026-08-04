@@ -38,7 +38,12 @@ export default function CategoryModal({
       {(!isEdit || category) && (
         <CategoryForm
           loading={loading}
-          initialValues={isEdit && category ? { categoryName: category.categoryName } : undefined}
+          mode={mode}
+          initialValues={
+            isEdit && category
+              ? { categoryName: category.categoryName, isActive: category.isActive }
+              : undefined
+          }
           onSubmit={onSubmit}
         />
       )}

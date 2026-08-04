@@ -10,6 +10,7 @@ export interface ReturnEvent {
   DamageStatus: 'Repairable' | 'Damaged' | 'Lost' | null;
   Notes: string | null;
   RecordedByUserId: number;
+  DeleteStatus: boolean;
   CreatedAt: Date;
 }
 

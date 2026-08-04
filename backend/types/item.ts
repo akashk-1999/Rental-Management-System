@@ -10,6 +10,7 @@ export interface Item {
   Description: string | null;
   ImageUrl: string | null;
   Status: 'Active' | 'Inactive';
+  DeleteStatus: boolean;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -50,6 +51,8 @@ export interface SafeItem {
   itemCode: string | null;
   unitType: string;
   totalQuantity: number;
+  /** True point-in-time available stock (TotalQuantity minus what's currently rented/damaged/lost). */
+  availableStock: number;
   rentalPrice: number;
   securityDeposit: number | null;
   description: string | null;

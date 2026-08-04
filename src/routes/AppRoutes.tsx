@@ -11,6 +11,7 @@ import Items from "../pages/Items";
 import Rentals from "../pages/Rentals";
 import Returns from "../pages/Returns";
 import Payments from "../pages/Payments";
+import Reports from "../pages/Reports";
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,7 @@ export default function AppRoutes() {
             <Route path="/rentals" element={<Rentals />} />
             <Route path="/returns" element={<Returns />} />
             <Route path="/payments" element={<Payments />} />
+            <Route path="/reports" element={<Reports />} />
             {/* Future protected pages: /properties, /tenants */}
           </Route>
         </Route>

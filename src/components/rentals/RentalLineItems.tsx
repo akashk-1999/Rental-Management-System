@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { Item } from "../../types/item";
+import { useToast } from "../../context/ToastContext";
 
 export interface RentalLineItemDraft {
   itemId: number | "";
@@ -19,7 +20,8 @@ interface RentalLineItemsProps {
 const ROW_GRID_COLS = "sm:grid-cols-[minmax(0,1fr)_6rem_7rem_7rem_2.5rem]";
 
 function formatItemLabel(item: Item): string {
-  return `${item.itemName} (${item.categoryName}) — Avail: ${item.totalQuantity}`;
+  const availability = item.availableStock > 0 ? `Avail: ${item.availableStock}` : "Out of Stock";
+  return `${item.itemName} (${item.categoryName}) — ${availability}`;
 }
 
 interface ItemComboboxProps {
@@ -30,6 +32,7 @@ interface ItemComboboxProps {
 }
 
 function ItemCombobox({ items, value, onChange, disabled = false }: ItemComboboxProps) {
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,8 +63,12 @@ function ItemCombobox({ items, value, onChange, disabled = false }: ItemCombobox
     );
   }, [items, query]);
 
-  const handleSelect = (itemId: number) => {
-    onChange(itemId);
+  const handleSelect = (item: Item) => {
+    if (item.availableStock <= 0) {
+      showToast(`'${item.itemName}' has no stock available.`, "error");
+      return;
+    }
+    onChange(item.itemId);
     setIsOpen(false);
     setQuery("");
   };
@@ -111,23 +118,31 @@ function ItemCombobox({ items, value, onChange, disabled = false }: ItemCombobox
             {filteredItems.length === 0 ? (
               <li className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">No items found.</li>
             ) : (
-              filteredItems.map((item) => (
-                <li key={item.itemId}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={item.itemId === value}
-                    onClick={() => handleSelect(item.itemId)}
-                    className={`block w-full px-3 py-2 text-left text-sm hover:bg-indigo-50 dark:hover:bg-indigo-500/10 ${
-                      item.itemId === value
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
-                        : "text-slate-700 dark:text-slate-200"
-                    }`}
-                  >
-                    {formatItemLabel(item)}
-                  </button>
-                </li>
-              ))
+              filteredItems.map((item) => {
+                const outOfStock = item.availableStock <= 0;
+                return (
+                  <li key={item.itemId}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={item.itemId === value}
+                      aria-disabled={outOfStock}
+                      onClick={() => handleSelect(item)}
+                      className={`block w-full px-3 py-2 text-left text-sm ${
+                        outOfStock
+                          ? "cursor-not-allowed text-rose-400 dark:text-rose-400/70"
+                          : `hover:bg-indigo-50 dark:hover:bg-indigo-500/10 ${
+                              item.itemId === value
+                                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
+                                : "text-slate-700 dark:text-slate-200"
+                            }`
+                      }`}
+                    >
+                      {formatItemLabel(item)}
+                    </button>
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>
@@ -209,11 +224,19 @@ export default function RentalLineItems({ items, lineItems, onChange, disabled =
                     <input
                       type="number"
                       min={1}
-                      max={selectedItem?.totalQuantity}
+                      max={selectedItem?.availableStock}
                       value={lineItem.quantityRented}
-                      onChange={(e) =>
-                        handleQuantityChange(index, e.target.value === "" ? "" : Number(e.target.value))
-                      }
+                      onChange={(e) => {
+                        if (e.target.value === "") {
+                          handleQuantityChange(index, "");
+                          return;
+                        }
+                        let nextQuantity = Number(e.target.value);
+                        if (selectedItem && nextQuantity > selectedItem.availableStock) {
+                          nextQuantity = selectedItem.availableStock;
+                        }
+                        handleQuantityChange(index, nextQuantity);
+                      }}
                       disabled={disabled || !selectedItem}
                       required
                       className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-center text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-700 sm:w-full"

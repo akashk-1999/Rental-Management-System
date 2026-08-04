@@ -98,6 +98,12 @@ export default function Items() {
 
       if (modalMode === "edit" && selectedItem) {
         await itemsApi.updateItem(selectedItem.itemId, payload);
+
+        const nextStatus = formData.isActive ? "Active" : "Inactive";
+        if (nextStatus !== selectedItem.status) {
+          await itemsApi.updateItemStatus(selectedItem.itemId, { status: nextStatus });
+        }
+
         showToast("Item updated successfully.");
       } else {
         await itemsApi.createItem(payload);

@@ -30,6 +30,7 @@ async function initSQLServerSchema(): Promise<void> {
         FullName NVARCHAR(100) NOT NULL,
         Role NVARCHAR(20) NOT NULL CHECK (Role IN ('Admin','Staff')),
         IsActive BIT NOT NULL DEFAULT 1,
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         UpdatedAt DATETIME2 NULL
       );
@@ -41,6 +42,7 @@ async function initSQLServerSchema(): Promise<void> {
         CategoryId INT IDENTITY(1,1) PRIMARY KEY,
         CategoryName NVARCHAR(100) NOT NULL UNIQUE,
         IsActive BIT NOT NULL DEFAULT 1,
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         UpdatedAt DATETIME2 NULL
       );
@@ -60,6 +62,7 @@ async function initSQLServerSchema(): Promise<void> {
         Description NVARCHAR(500) NULL,
         ImageUrl NVARCHAR(255) NULL,
         Status NVARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (Status IN ('Active','Inactive')),
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         UpdatedAt DATETIME2 NULL,
         CONSTRAINT CK_Items_TotalQuantity CHECK (TotalQuantity >= 0)
@@ -79,6 +82,7 @@ async function initSQLServerSchema(): Promise<void> {
         Address NVARCHAR(300) NULL,
         IdProof NVARCHAR(100) NULL,
         Notes NVARCHAR(500) NULL,
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         UpdatedAt DATETIME2 NULL
       );
@@ -101,6 +105,7 @@ async function initSQLServerSchema(): Promise<void> {
         PaymentStatus NVARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (PaymentStatus IN ('Paid','Partial','Pending')),
         Notes NVARCHAR(500) NULL,
         CreatedByUserId INT NOT NULL FOREIGN KEY REFERENCES Users(UserId),
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         UpdatedAt DATETIME2 NULL
       );
@@ -119,6 +124,7 @@ async function initSQLServerSchema(): Promise<void> {
         QuantityRented INT NOT NULL CHECK (QuantityRented > 0),
         UnitPrice DECIMAL(10,2) NOT NULL,
         LineTotal AS (QuantityRented * UnitPrice) PERSISTED,
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
       );
     `);
@@ -138,6 +144,7 @@ async function initSQLServerSchema(): Promise<void> {
         DamageStatus NVARCHAR(20) NULL CHECK (DamageStatus IN ('Repairable','Damaged','Lost') OR DamageStatus IS NULL),
         Notes NVARCHAR(500) NULL,
         RecordedByUserId INT NOT NULL FOREIGN KEY REFERENCES Users(UserId),
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
       );
     `);
@@ -156,6 +163,7 @@ async function initSQLServerSchema(): Promise<void> {
         PaymentMode NVARCHAR(20) NULL,
         Notes NVARCHAR(300) NULL,
         RecordedByUserId INT NOT NULL FOREIGN KEY REFERENCES Users(UserId),
+        DeleteStatus BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
       );
     `);
@@ -181,8 +189,11 @@ async function initSQLServerSchema(): Promise<void> {
                      SUM(QuantityMissing)  AS TotalMissing
               FROM ReturnEvents
               WHERE RentalLineItemId = rli.RentalLineItemId
+                AND DeleteStatus = 0
           ) re
           WHERE r.Status IN ('Active','PartialReturn','Overdue')
+            AND r.DeleteStatus = 0
+            AND rli.DeleteStatus = 0
           GROUP BY rli.ItemId
       )
       SELECT
@@ -196,7 +207,7 @@ async function initSQLServerSchema(): Promise<void> {
           i.TotalQuantity - ISNULL(ro.TotalRented - ro.TotalReturned - ro.TotalDamaged - ro.TotalMissing, 0) - ISNULL(ro.TotalDamaged, 0) - ISNULL(ro.TotalMissing, 0) AS AvailableStock
       FROM Items i
       LEFT JOIN RentedOut ro ON ro.ItemId = i.ItemId
-      WHERE i.Status = 'Active';
+      WHERE i.Status = 'Active' AND i.DeleteStatus = 0;
     `);
 
     await execute(`
@@ -210,7 +221,9 @@ async function initSQLServerSchema(): Promise<void> {
           r.Status
       FROM Rentals r
       JOIN Customers c ON c.CustomerId = r.CustomerId
-      WHERE r.Status IN ('Active','PartialReturn');
+      WHERE r.Status IN ('Active','PartialReturn')
+        AND r.DeleteStatus = 0
+        AND c.DeleteStatus = 0;
     `);
 
     await execute(`
@@ -225,7 +238,9 @@ async function initSQLServerSchema(): Promise<void> {
       FROM Rentals r
       JOIN Customers c ON c.CustomerId = r.CustomerId
       WHERE r.Status IN ('Active','PartialReturn')
-        AND r.ExpectedReturnDate < CAST(SYSUTCDATETIME() AS DATE);
+        AND r.ExpectedReturnDate < CAST(SYSUTCDATETIME() AS DATE)
+        AND r.DeleteStatus = 0
+        AND c.DeleteStatus = 0;
     `);
     logger.info('[Database] Full DDL execution complete.');
   } else {
@@ -234,6 +249,10 @@ async function initSQLServerSchema(): Promise<void> {
 
   await ensureItemCategoriesUpdatedAtColumn();
   await ensureRentalDateTimeColumns();
+  await ensureDeleteStatusColumns();
+  await ensureDeleteStatusViews();
+  await ensureSchemaMigrationsTable();
+  await backfillReturnTotalQuantityDoubleCount();
 }
 
 /**
@@ -289,6 +308,202 @@ async function ensureRentalDateTimeColumns(): Promise<void> {
     await execute('ALTER TABLE Rentals ALTER COLUMN ExpectedReturnDate DATETIME2 NOT NULL;');
     await execute('CREATE INDEX IX_Rentals_ExpectedReturnDate ON Rentals(ExpectedReturnDate);');
   }
+}
+
+/**
+ * Migration guard: adds the DeleteStatus BIT NOT NULL DEFAULT 0 column to every soft-delete-aware
+ * table for databases that were initialized before soft delete was introduced. Safe to run on
+ * every startup — skips any table that already has the column.
+ */
+async function ensureDeleteStatusColumns(): Promise<void> {
+  const tables = [
+    'Users',
+    'ItemCategories',
+    'Items',
+    'Customers',
+    'Rentals',
+    'RentalLineItems',
+    'ReturnEvents',
+    'Payments'
+  ];
+
+  for (const table of tables) {
+    const columnExists = await query(
+      "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName AND COLUMN_NAME = 'DeleteStatus'",
+      { TableName: table }
+    );
+
+    if (columnExists.length === 0) {
+      logger.info(`[Database] Adding missing DeleteStatus column to ${table} table...`);
+      await execute(`ALTER TABLE ${table} ADD DeleteStatus BIT NOT NULL DEFAULT 0;`);
+    }
+  }
+}
+
+/**
+ * Migration guard: (re)creates vw_ItemInventoryStatus, vw_UpcomingReturns, and vw_OverdueRentals
+ * with their DeleteStatus = 0 filters, so databases whose views were created before soft delete
+ * was introduced pick up the filtered definitions. Safe to run on every startup — DROP + CREATE
+ * is idempotent and cheap for a view.
+ */
+async function ensureDeleteStatusViews(): Promise<void> {
+  logger.info('[Database] Ensuring soft-delete-aware view definitions...');
+
+  await execute(`
+    IF EXISTS (SELECT 1 FROM sys.views WHERE name = 'vw_ItemInventoryStatus')
+      DROP VIEW vw_ItemInventoryStatus;
+  `);
+  await execute(`
+    CREATE VIEW vw_ItemInventoryStatus AS
+    WITH RentedOut AS (
+        SELECT
+            rli.ItemId,
+            SUM(rli.QuantityRented) AS TotalRented,
+            SUM(ISNULL(re.TotalReturned,0)) AS TotalReturned,
+            SUM(ISNULL(re.TotalDamaged,0)) AS TotalDamaged,
+            SUM(ISNULL(re.TotalMissing,0)) AS TotalMissing
+        FROM RentalLineItems rli
+        JOIN Rentals r ON r.RentalId = rli.RentalId
+        OUTER APPLY (
+            SELECT SUM(QuantityReturned) AS TotalReturned,
+                   SUM(QuantityDamaged)  AS TotalDamaged,
+                   SUM(QuantityMissing)  AS TotalMissing
+            FROM ReturnEvents
+            WHERE RentalLineItemId = rli.RentalLineItemId
+              AND DeleteStatus = 0
+        ) re
+        WHERE r.Status IN ('Active','PartialReturn','Overdue')
+          AND r.DeleteStatus = 0
+          AND rli.DeleteStatus = 0
+        GROUP BY rli.ItemId
+    )
+    SELECT
+        i.ItemId,
+        i.ItemName,
+        i.CategoryId,
+        i.TotalQuantity,
+        ISNULL(ro.TotalRented - ro.TotalReturned - ro.TotalDamaged - ro.TotalMissing, 0) AS CurrentlyRented,
+        ISNULL(ro.TotalDamaged, 0) AS DamagedStock,
+        ISNULL(ro.TotalMissing, 0) AS LostStock,
+        i.TotalQuantity - ISNULL(ro.TotalRented - ro.TotalReturned - ro.TotalDamaged - ro.TotalMissing, 0) - ISNULL(ro.TotalDamaged, 0) - ISNULL(ro.TotalMissing, 0) AS AvailableStock
+    FROM Items i
+    LEFT JOIN RentedOut ro ON ro.ItemId = i.ItemId
+    WHERE i.Status = 'Active' AND i.DeleteStatus = 0;
+  `);
+
+  await execute(`
+    IF EXISTS (SELECT 1 FROM sys.views WHERE name = 'vw_UpcomingReturns')
+      DROP VIEW vw_UpcomingReturns;
+  `);
+  await execute(`
+    CREATE VIEW vw_UpcomingReturns AS
+    SELECT
+        r.RentalId,
+        r.RentalCode,
+        c.CustomerName,
+        c.MobileNumber,
+        r.ExpectedReturnDate,
+        r.Status
+    FROM Rentals r
+    JOIN Customers c ON c.CustomerId = r.CustomerId
+    WHERE r.Status IN ('Active','PartialReturn')
+      AND r.DeleteStatus = 0
+      AND c.DeleteStatus = 0;
+  `);
+
+  await execute(`
+    IF EXISTS (SELECT 1 FROM sys.views WHERE name = 'vw_OverdueRentals')
+      DROP VIEW vw_OverdueRentals;
+  `);
+  await execute(`
+    CREATE VIEW vw_OverdueRentals AS
+    SELECT
+        r.RentalId,
+        r.RentalCode,
+        c.CustomerName,
+        c.MobileNumber,
+        r.ExpectedReturnDate,
+        DATEDIFF(DAY, r.ExpectedReturnDate, CAST(SYSUTCDATETIME() AS DATE)) AS DaysOverdue
+    FROM Rentals r
+    JOIN Customers c ON c.CustomerId = r.CustomerId
+    WHERE r.Status IN ('Active','PartialReturn')
+      AND r.ExpectedReturnDate < CAST(SYSUTCDATETIME() AS DATE)
+      AND r.DeleteStatus = 0
+      AND c.DeleteStatus = 0;
+  `);
+}
+
+/**
+ * Migration guard: creates a lightweight ledger of one-time data-repair migrations that must run
+ * exactly once (not on every startup, unlike the other ensure* guards above, which are safely
+ * re-runnable). Safe to run on every startup — skips creation if the table already exists.
+ */
+async function ensureSchemaMigrationsTable(): Promise<void> {
+  const tableExists = await query(
+    "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SchemaMigrations'"
+  );
+
+  if (tableExists.length === 0) {
+    logger.info('[Database] Creating SchemaMigrations table...');
+    await execute(`
+      CREATE TABLE SchemaMigrations (
+        MigrationName NVARCHAR(200) NOT NULL PRIMARY KEY,
+        AppliedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+      );
+    `);
+  }
+}
+
+async function hasMigrationRun(migrationName: string): Promise<boolean> {
+  const rows = await query(
+    'SELECT 1 AS Found FROM SchemaMigrations WHERE MigrationName = @MigrationName',
+    { MigrationName: migrationName }
+  );
+  return rows.length > 0;
+}
+
+async function markMigrationRun(migrationName: string): Promise<void> {
+  await execute('INSERT INTO SchemaMigrations (MigrationName) VALUES (@MigrationName)', {
+    MigrationName: migrationName
+  });
+}
+
+/**
+ * One-time data repair: undoes the double-counted Items.TotalQuantity left behind by a return-flow
+ * bug. Previously, ReturnRepository.createReturnTransaction both inserted a ReturnEvents row (which
+ * vw_ItemInventoryStatus already subtracts back out when computing CurrentlyRented/AvailableStock)
+ * AND incremented Items.TotalQuantity by that same returned quantity, so every recorded return
+ * credited AvailableStock twice. The increment itself has been removed from the return flow, but
+ * every quantity it already wrote into Items.TotalQuantity before that fix is still sitting in the
+ * column. This subtracts, once, the total ever-returned quantity per item (sum of undeleted
+ * ReturnEvents.QuantityReturned, joined to Items via RentalLineItems) back out of TotalQuantity.
+ * Guarded by SchemaMigrations so it can never double-apply, even across repeated app restarts.
+ */
+async function backfillReturnTotalQuantityDoubleCount(): Promise<void> {
+  const migrationName = 'BackfillReturnTotalQuantityDoubleCount_2026_07';
+  if (await hasMigrationRun(migrationName)) {
+    return;
+  }
+
+  logger.info('[Database] Backfilling Items.TotalQuantity to undo the return double-count bug...');
+  await execute(`
+    ;WITH ReturnedQty AS (
+        SELECT rli.ItemId, SUM(re.QuantityReturned) AS TotalReturnedQty
+        FROM ReturnEvents re
+        JOIN RentalLineItems rli ON rli.RentalLineItemId = re.RentalLineItemId
+        WHERE re.DeleteStatus = 0
+        GROUP BY rli.ItemId
+    )
+    UPDATE i
+    SET i.TotalQuantity = i.TotalQuantity - rq.TotalReturnedQty,
+        i.UpdatedAt = SYSUTCDATETIME()
+    FROM Items i
+    JOIN ReturnedQty rq ON rq.ItemId = i.ItemId
+    WHERE rq.TotalReturnedQty > 0;
+  `);
+
+  await markMigrationRun(migrationName);
+  logger.info('[Database] Backfill complete.');
 }
 
 async function seedDefaultAdmin(): Promise<void> {

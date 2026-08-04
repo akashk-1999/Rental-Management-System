@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil, Power, Search, Filter } from "lucide-react";
+import { Pencil, Trash2, Search, Filter } from "lucide-react";
 import Table, { TableColumn } from "../common/Table";
 import { Item } from "../../types/item";
 
@@ -94,15 +94,12 @@ export default function ItemTable({ items, onEdit, onToggleStatus }: ItemTablePr
           <button
             type="button"
             onClick={() => onToggleStatus?.(item)}
-            title={item.status === "Active" ? "Deactivate" : "Activate"}
-            aria-label={`${item.status === "Active" ? "Deactivate" : "Activate"} ${item.itemName}`}
-            className={`rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 focus:outline-none focus-visible:ring-2 dark:text-slate-400 ${
-              item.status === "Active"
-                ? "hover:text-rose-600 focus-visible:ring-rose-500 dark:hover:text-rose-400"
-                : "hover:text-emerald-600 focus-visible:ring-emerald-500 dark:hover:text-emerald-400"
-            }`}
+            disabled={item.status !== "Active"}
+            title={item.status === "Active" ? "Delete" : "Already inactive — edit the item to reactivate"}
+            aria-label={`Delete ${item.itemName}`}
+            className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 dark:text-slate-400 dark:hover:text-rose-400"
           >
-            <Power className="h-4 w-4" aria-hidden="true" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       ),

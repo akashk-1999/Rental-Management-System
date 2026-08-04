@@ -14,12 +14,14 @@ export interface ItemFormValues {
   securityDeposit: string;
   description: string;
   imageUrl: string;
+  isActive: boolean;
 }
 
 interface ItemFormProps {
   categories: Category[];
   initialValues?: Partial<ItemFormValues>;
   loading?: boolean;
+  mode?: "create" | "edit";
   onSubmit: (formData: ItemFormValues) => void;
 }
 
@@ -35,9 +37,10 @@ const DEFAULT_VALUES: ItemFormValues = {
   securityDeposit: "",
   description: "",
   imageUrl: "",
+  isActive: true,
 };
 
-export default function ItemForm({ categories, initialValues, loading = false, onSubmit }: ItemFormProps) {
+export default function ItemForm({ categories, initialValues, loading = false, mode = "create", onSubmit }: ItemFormProps) {
   const [values, setValues] = useState<ItemFormValues>({
     ...DEFAULT_VALUES,
     ...initialValues,
@@ -191,6 +194,22 @@ export default function ItemForm({ categories, initialValues, loading = false, o
         disabled={loading}
         placeholder="Enter image URL (optional)"
       />
+
+      {mode === "edit" && (
+        <div className="flex items-center gap-2">
+          <input
+            id="isActive"
+            type="checkbox"
+            checked={values.isActive}
+            onChange={(e) => handleChange("isActive", e.target.checked)}
+            disabled={loading}
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800"
+          />
+          <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            Active
+          </label>
+        </div>
+      )}
 
       <div className="flex items-center justify-end pt-2">
         <Button type="submit" variant="primary" loading={loading}>

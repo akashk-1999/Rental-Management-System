@@ -42,6 +42,7 @@ export default function ItemModal({
         <ItemForm
           categories={categories}
           loading={loading}
+          mode={mode}
           initialValues={
             isEdit && item
               ? {
@@ -54,6 +55,7 @@ export default function ItemModal({
                   securityDeposit: item.securityDeposit !== null ? String(item.securityDeposit) : "",
                   description: item.description ?? "",
                   imageUrl: item.imageUrl ?? "",
+                  isActive: item.status === "Active",
                 }
               : undefined
           }

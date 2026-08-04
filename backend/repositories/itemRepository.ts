@@ -4,6 +4,12 @@ import { Item } from '../types/item';
 
 export interface ItemWithCategory extends Item {
   CategoryName: string;
+  /**
+   * True point-in-time available stock (TotalQuantity minus units currently out on active
+   * rentals, damaged, or lost), sourced from vw_ItemInventoryStatus — distinct from the raw
+   * master TotalQuantity, which does not account for what's presently rented out.
+   */
+  AvailableStock: number;
 }
 
 export class ItemRepositoryError extends Error {
@@ -25,20 +31,24 @@ export class ItemRepository {
    * SQL Query:
    * SELECT i.ItemId, i.ItemName, i.CategoryId, c.CategoryName, i.ItemCode, i.UnitType,
    *        i.TotalQuantity, i.RentalPrice, i.SecurityDeposit, i.Description, i.ImageUrl,
-   *        i.Status, i.CreatedAt, i.UpdatedAt
+   *        i.Status, i.CreatedAt, i.UpdatedAt,
+   *        ISNULL(v.AvailableStock, i.TotalQuantity) AS AvailableStock
    * FROM Items i
    * JOIN ItemCategories c ON c.CategoryId = i.CategoryId
-   * WHERE i.ItemId = @ItemId
+   * LEFT JOIN vw_ItemInventoryStatus v ON v.ItemId = i.ItemId
+   * WHERE i.ItemId = @ItemId AND i.DeleteStatus = 0 AND c.DeleteStatus = 0
    */
   static async getItemById(id: number): Promise<ItemWithCategory | null> {
     try {
       const rows = await query<ItemWithCategory>(
         `SELECT i.ItemId, i.ItemName, i.CategoryId, c.CategoryName, i.ItemCode, i.UnitType,
                 i.TotalQuantity, i.RentalPrice, i.SecurityDeposit, i.Description, i.ImageUrl,
-                i.Status, i.CreatedAt, i.UpdatedAt
+                i.Status, i.CreatedAt, i.UpdatedAt,
+                ISNULL(v.AvailableStock, i.TotalQuantity) AS AvailableStock
          FROM Items i
          JOIN ItemCategories c ON c.CategoryId = i.CategoryId
-         WHERE i.ItemId = @ItemId`,
+         LEFT JOIN vw_ItemInventoryStatus v ON v.ItemId = i.ItemId
+         WHERE i.ItemId = @ItemId AND i.DeleteStatus = 0 AND c.DeleteStatus = 0`,
         { ItemId: id }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -56,7 +66,7 @@ export class ItemRepository {
    * SELECT ItemId, ItemName, CategoryId, ItemCode, UnitType, TotalQuantity, RentalPrice,
    *        SecurityDeposit, Description, ImageUrl, Status, CreatedAt, UpdatedAt
    * FROM Items
-   * WHERE ItemCode = @ItemCode
+   * WHERE ItemCode = @ItemCode AND DeleteStatus = 0
    */
   static async getItemByCode(itemCode: string): Promise<Item | null> {
     try {
@@ -64,7 +74,7 @@ export class ItemRepository {
         `SELECT ItemId, ItemName, CategoryId, ItemCode, UnitType, TotalQuantity, RentalPrice,
                 SecurityDeposit, Description, ImageUrl, Status, CreatedAt, UpdatedAt
          FROM Items
-         WHERE ItemCode = @ItemCode`,
+         WHERE ItemCode = @ItemCode AND DeleteStatus = 0`,
         { ItemCode: itemCode }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -81,9 +91,12 @@ export class ItemRepository {
    * SQL Query:
    * SELECT i.ItemId, i.ItemName, i.CategoryId, c.CategoryName, i.ItemCode, i.UnitType,
    *        i.TotalQuantity, i.RentalPrice, i.SecurityDeposit, i.Description, i.ImageUrl,
-   *        i.Status, i.CreatedAt, i.UpdatedAt
+   *        i.Status, i.CreatedAt, i.UpdatedAt,
+   *        ISNULL(v.AvailableStock, i.TotalQuantity) AS AvailableStock
    * FROM Items i
    * JOIN ItemCategories c ON c.CategoryId = i.CategoryId
+   * LEFT JOIN vw_ItemInventoryStatus v ON v.ItemId = i.ItemId
+   * WHERE i.DeleteStatus = 0 AND c.DeleteStatus = 0
    * ORDER BY i.ItemName ASC
    */
   static async getAllItems(): Promise<ItemWithCategory[]> {
@@ -91,9 +104,12 @@ export class ItemRepository {
       const rows = await query<ItemWithCategory>(
         `SELECT i.ItemId, i.ItemName, i.CategoryId, c.CategoryName, i.ItemCode, i.UnitType,
                 i.TotalQuantity, i.RentalPrice, i.SecurityDeposit, i.Description, i.ImageUrl,
-                i.Status, i.CreatedAt, i.UpdatedAt
+                i.Status, i.CreatedAt, i.UpdatedAt,
+                ISNULL(v.AvailableStock, i.TotalQuantity) AS AvailableStock
          FROM Items i
          JOIN ItemCategories c ON c.CategoryId = i.CategoryId
+         LEFT JOIN vw_ItemInventoryStatus v ON v.ItemId = i.ItemId
+         WHERE i.DeleteStatus = 0 AND c.DeleteStatus = 0
          ORDER BY i.ItemName ASC`
       );
       return rows;
@@ -118,7 +134,7 @@ export class ItemRepository {
    *         @SecurityDeposit, @Description, @ImageUrl, 'Active')
    */
   static async createItem(
-    item: Omit<Item, 'ItemId' | 'Status' | 'CreatedAt' | 'UpdatedAt'>
+    item: Omit<Item, 'ItemId' | 'Status' | 'CreatedAt' | 'UpdatedAt' | 'DeleteStatus'>
   ): Promise<Item> {
     try {
       const rows = await query<Item>(
@@ -176,7 +192,7 @@ export class ItemRepository {
    *     Description = @Description,
    *     ImageUrl = @ImageUrl,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE ItemId = @ItemId
+   * WHERE ItemId = @ItemId AND DeleteStatus = 0
    */
   static async updateItem(
     item: Pick<
@@ -212,7 +228,7 @@ export class ItemRepository {
              Description = @Description,
              ImageUrl = @ImageUrl,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE ItemId = @ItemId`,
+         WHERE ItemId = @ItemId AND DeleteStatus = 0`,
         {
           ItemId: item.ItemId,
           ItemName: item.ItemName,
@@ -250,7 +266,7 @@ export class ItemRepository {
    * UPDATE Items
    * SET Status = @Status,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE ItemId = @ItemId
+   * WHERE ItemId = @ItemId AND DeleteStatus = 0
    */
   static async updateItemStatus(id: number, status: 'Active' | 'Inactive'): Promise<void> {
     try {
@@ -258,7 +274,7 @@ export class ItemRepository {
         `UPDATE Items
          SET Status = @Status,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE ItemId = @ItemId`,
+         WHERE ItemId = @ItemId AND DeleteStatus = 0`,
         {
           ItemId: id,
           Status: status
@@ -291,7 +307,7 @@ export class ItemRepository {
     return ItemRepository.getAllItems();
   }
 
-  async createItem(item: Omit<Item, 'ItemId' | 'Status' | 'CreatedAt' | 'UpdatedAt'>): Promise<Item> {
+  async createItem(item: Omit<Item, 'ItemId' | 'Status' | 'CreatedAt' | 'UpdatedAt' | 'DeleteStatus'>): Promise<Item> {
     return ItemRepository.createItem(item);
   }
 

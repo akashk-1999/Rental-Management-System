@@ -37,6 +37,14 @@ export const authenticateToken = async (
     // Call verifyToken asynchronously as required
     const decoded = await authService.verifyToken(token);
 
+    // Re-check current account state on every request so a still-valid token issued
+    // before a user was deactivated or deleted stops working immediately, instead of
+    // remaining usable until it naturally expires.
+    const user = await userRepository.getUserById(decoded.userId);
+    if (!user || !user.IsActive) {
+      throw new AuthenticationError('Account is no longer active.');
+    }
+
     // Store the decoded JwtPayload on req.user
     req.user = decoded;
 

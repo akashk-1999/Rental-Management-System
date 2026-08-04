@@ -40,6 +40,7 @@ export class ItemService {
       itemCode: item.ItemCode,
       unitType: item.UnitType,
       totalQuantity: item.TotalQuantity,
+      availableStock: Number(item.AvailableStock),
       rentalPrice: Number(item.RentalPrice),
       securityDeposit: item.SecurityDeposit !== null ? Number(item.SecurityDeposit) : null,
       description: item.Description,

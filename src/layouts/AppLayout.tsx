@@ -6,8 +6,6 @@ import {
   LayoutDashboard,
   Users,
   Home,
-  Building,
-  UserCheck,
   CreditCard,
   UserCircle,
   KeyRound,
@@ -22,9 +20,12 @@ import {
   Package,
   ClipboardList,
   PackageCheck,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import ProfileModal from "../components/common/ProfileModal";
+import ChangePasswordModal from "../components/common/ChangePasswordModal";
 
 const NAV_ITEMS = [
   { label: "Home", to: "/home", icon: Home },
@@ -34,9 +35,8 @@ const NAV_ITEMS = [
   { label: "Items", to: "/items", icon: Package },
   { label: "Rentals", to: "/rentals", icon: ClipboardList },
   { label: "Returns", to: "/returns", icon: PackageCheck },
-  { label: "Properties", to: "/properties", icon: Building },
-  { label: "Tenants", to: "/tenants", icon: UserCheck },
   { label: "Payments", to: "/payments", icon: CreditCard },
+  { label: "Reports", to: "/reports", icon: FileText },
 ];
 
 const FOCUS_RING =
@@ -100,6 +100,8 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
@@ -333,7 +335,10 @@ export default function AppLayout() {
                   type="button"
                   role="menuitem"
                   tabIndex={-1}
-                  onClick={() => setProfileMenuOpen(false)}
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setIsProfileModalOpen(true);
+                  }}
                   className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700 ${FOCUS_RING}`}
                 >
                   <UserCircle className="h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden="true" />
@@ -343,7 +348,10 @@ export default function AppLayout() {
                   type="button"
                   role="menuitem"
                   tabIndex={-1}
-                  onClick={() => setProfileMenuOpen(false)}
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setIsChangePasswordModalOpen(true);
+                  }}
                   className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors duration-150 ease-in-out hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700 ${FOCUS_RING}`}
                 >
                   <KeyRound className="h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden="true" />
@@ -372,6 +380,12 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={user} />
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+      />
     </div>
   );
 }

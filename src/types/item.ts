@@ -6,6 +6,7 @@ export interface Item extends Record<string, unknown> {
   itemCode: string | null;
   unitType: string;
   totalQuantity: number;
+  availableStock: number;
   rentalPrice: number;
   securityDeposit: number | null;
   description: string | null;

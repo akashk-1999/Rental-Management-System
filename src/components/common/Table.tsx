@@ -20,6 +20,7 @@ interface TableProps<T> {
   emptyMessage?: string;
   getRowKey?: (row: T, index: number) => string | number;
   pageSize?: number;
+  onRowClick?: (row: T, index: number) => void;
 }
 
 export default function Table<T extends Record<string, unknown>>({
@@ -28,6 +29,7 @@ export default function Table<T extends Record<string, unknown>>({
   emptyMessage = "No data found.",
   getRowKey,
   pageSize = 10,
+  onRowClick,
 }: TableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -69,7 +71,8 @@ export default function Table<T extends Record<string, unknown>>({
               pageData.map((row, index) => (
                 <tr
                   key={getRowKey ? getRowKey(row, startIndex + index) : startIndex + index}
-                  className="divide-x divide-slate-100 hover:bg-slate-50 dark:divide-slate-800 dark:hover:bg-slate-800/60"
+                  onClick={onRowClick ? () => onRowClick(row, startIndex + index) : undefined}
+                  className={`divide-x divide-slate-100 hover:bg-slate-50 dark:divide-slate-800 dark:hover:bg-slate-800/60 ${onRowClick ? "cursor-pointer" : ""}`}
                 >
                   {columns.map((column) => (
                     <td

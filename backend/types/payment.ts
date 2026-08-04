@@ -11,6 +11,7 @@ export interface Payment {
   PaymentMode: string | null;
   Notes: string | null;
   RecordedByUserId: number;
+  DeleteStatus: boolean;
   CreatedAt: Date;
 }
 

@@ -345,6 +345,17 @@ describe('Authentication Module - Integration Tests', () => {
       const payload = { userId: 42, username: 'clara_admin', role: 'Admin' };
       const validToken = generateToken(payload);
 
+      mockGetUserById.mockResolvedValueOnce({
+        UserId: 42,
+        Username: 'clara_admin',
+        PasswordHash: '$2a$10$mockedpasswordhash',
+        FullName: 'Clara Admin',
+        Role: 'Admin',
+        IsActive: true,
+        CreatedAt: new Date(),
+        UpdatedAt: null,
+      });
+
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${validToken}`);
@@ -361,12 +372,63 @@ describe('Authentication Module - Integration Tests', () => {
         },
       });
     });
+
+    it('Scenario 12b: Should reject with 401 when the token is valid but the account was deactivated after issuance', async () => {
+      const payload = { userId: 42, username: 'clara_admin', role: 'Admin' };
+      const validToken = generateToken(payload);
+
+      mockGetUserById.mockResolvedValueOnce({
+        UserId: 42,
+        Username: 'clara_admin',
+        PasswordHash: '$2a$10$mockedpasswordhash',
+        FullName: 'Clara Admin',
+        Role: 'Admin',
+        IsActive: false,
+        CreatedAt: new Date(),
+        UpdatedAt: null,
+      });
+
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Account is no longer active.');
+    });
+
+    it('Scenario 12c: Should reject with 401 when the token is valid but the account has since been deleted', async () => {
+      const payload = { userId: 42, username: 'clara_admin', role: 'Admin' };
+      const validToken = generateToken(payload);
+
+      // Deleted users no longer come back from getUserById (repository filters DeleteStatus = 0)
+      mockGetUserById.mockResolvedValueOnce(null);
+
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Account is no longer active.');
+    });
   });
 
   // --- Authorization Tests (Scenarios 13 - 16) ---
   describe('Role-Based Authorization Middleware', () => {
     it('Scenario 13: Should allow Admin user to access an Admin-only endpoint', async () => {
       const adminToken = generateToken({ userId: 1, username: 'boss', role: 'Admin' });
+
+      mockGetUserById.mockResolvedValueOnce({
+        UserId: 1,
+        Username: 'boss',
+        PasswordHash: '$2a$10$mockedpasswordhash',
+        FullName: 'Boss Admin',
+        Role: 'Admin',
+        IsActive: true,
+        CreatedAt: new Date(),
+        UpdatedAt: null,
+      });
 
       const response = await request(app)
         .get('/api/test-admin-only')
@@ -379,6 +441,17 @@ describe('Authentication Module - Integration Tests', () => {
 
     it('Scenario 14: Should reject Staff user trying to access an Admin-only endpoint with 403', async () => {
       const staffToken = generateToken({ userId: 2, username: 'helper', role: 'Staff' });
+
+      mockGetUserById.mockResolvedValueOnce({
+        UserId: 2,
+        Username: 'helper',
+        PasswordHash: '$2a$10$mockedpasswordhash',
+        FullName: 'Helper Staff',
+        Role: 'Staff',
+        IsActive: true,
+        CreatedAt: new Date(),
+        UpdatedAt: null,
+      });
 
       const response = await request(app)
         .get('/api/test-admin-only')
@@ -400,6 +473,30 @@ describe('Authentication Module - Integration Tests', () => {
     it('Scenario 16: Should allow both Admin and Staff to access multi-role endpoint', async () => {
       const staffToken = generateToken({ userId: 2, username: 'helper', role: 'Staff' });
       const adminToken = generateToken({ userId: 1, username: 'boss', role: 'Admin' });
+
+      const usersById: Record<number, any> = {
+        1: {
+          UserId: 1,
+          Username: 'boss',
+          PasswordHash: '$2a$10$mockedpasswordhash',
+          FullName: 'Boss Admin',
+          Role: 'Admin',
+          IsActive: true,
+          CreatedAt: new Date(),
+          UpdatedAt: null,
+        },
+        2: {
+          UserId: 2,
+          Username: 'helper',
+          PasswordHash: '$2a$10$mockedpasswordhash',
+          FullName: 'Helper Staff',
+          Role: 'Staff',
+          IsActive: true,
+          CreatedAt: new Date(),
+          UpdatedAt: null,
+        },
+      };
+      mockGetUserById.mockImplementation(async (id: number) => usersById[id] ?? null);
 
       // Test Staff
       const staffResponse = await request(app)
@@ -484,6 +581,17 @@ describe('Authentication Module - Integration Tests', () => {
       const payload = { userId: 5, username: 'charlie_staff', role: 'Staff' };
       const validToken = generateToken(payload);
 
+      mockGetUserById.mockResolvedValueOnce({
+        UserId: 5,
+        Username: 'charlie_staff',
+        PasswordHash: '$2a$10$mockedpasswordhash',
+        FullName: 'Charlie Staff',
+        Role: 'Staff',
+        IsActive: true,
+        CreatedAt: new Date(),
+        UpdatedAt: null,
+      });
+
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${validToken}`);
@@ -516,8 +624,9 @@ describe('Authentication Module - Integration Tests', () => {
       const payload = { userId: 10, username: 'john_doe', role: 'Staff' };
       const validToken = generateToken(payload);
 
-      // Mock DB retrieval and password checks
-      mockGetUserById.mockResolvedValueOnce(currentUser);
+      // Mock DB retrieval (called once by authMiddleware, once by AuthService.changePassword)
+      // and password checks
+      mockGetUserById.mockResolvedValue(currentUser);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true); // Old password match
       mockResetPassword.mockResolvedValueOnce(undefined);
 
@@ -551,8 +660,9 @@ describe('Authentication Module - Integration Tests', () => {
       const payload = { userId: 10, username: 'john_doe', role: 'Staff' };
       const validToken = generateToken(payload);
 
-      // Mock DB retrieval and failed password checks
-      mockGetUserById.mockResolvedValueOnce(currentUser);
+      // Mock DB retrieval (called once by authMiddleware, once by AuthService.changePassword)
+      // and failed password checks
+      mockGetUserById.mockResolvedValue(currentUser);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false); // Old password mismatch
 
       const response = await request(app)

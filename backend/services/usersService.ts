@@ -67,11 +67,12 @@ export class UsersService {
   }
 
   /**
-   * Retrieves all active users and maps them into safe, client-facing DTOs.
+   * Retrieves all non-deleted users (active and inactive) and maps them into safe,
+   * client-facing DTOs.
    */
   async getAllUsers(): Promise<SafeUser[]> {
     const users = await this.userRepository.getAllUsers();
-    logger.info(`[UsersService.getAllUsers] Retrieved ${users.length} active user(s).`);
+    logger.info(`[UsersService.getAllUsers] Retrieved ${users.length} user(s).`);
     return users.map((user) => this.mapToSafeUser(user));
   }
 
@@ -150,8 +151,8 @@ export class UsersService {
   }
 
   /**
-   * Soft-deletes a user by setting IsActive to false via UserRepository.disableUser().
-   * No database records are physically removed.
+   * Soft-deletes a user by setting IsActive to false and DeleteStatus to true via
+   * UserRepository.disableUser(). No database records are physically removed.
    */
   async deleteUser(userId: number): Promise<void> {
     const existingUser = await this.userRepository.getUserById(userId);

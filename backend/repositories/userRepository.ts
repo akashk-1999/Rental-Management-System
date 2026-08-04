@@ -10,6 +10,7 @@ export interface User {
   IsActive: boolean;
   Email: string | null;
   ContactNumber: string | null;
+  DeleteStatus: boolean;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -32,14 +33,14 @@ export class UserRepository {
    * SQL Query:
    * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
    * FROM Users
-   * WHERE UserId = @UserId
+   * WHERE UserId = @UserId AND DeleteStatus = 0
    */
   static async getUserById(id: number): Promise<User | null> {
     try {
       const rows = await query<User>(
         `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
          FROM Users
-         WHERE UserId = @UserId`,
+         WHERE UserId = @UserId AND DeleteStatus = 0`,
         { UserId: id }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -55,14 +56,14 @@ export class UserRepository {
    * SQL Query:
    * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
    * FROM Users
-   * WHERE Username = @Username
+   * WHERE Username = @Username AND DeleteStatus = 0
    */
   static async getUserByUsername(username: string): Promise<User | null> {
     try {
       const rows = await query<User>(
-        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt 
-         FROM Users 
-         WHERE Username = @Username`,
+        `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, CreatedAt, UpdatedAt
+         FROM Users
+         WHERE Username = @Username AND DeleteStatus = 0`,
         { Username: username }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -73,12 +74,14 @@ export class UserRepository {
   }
 
   /**
-   * Retrieves all active user records from the Users table, ordered alphabetically by FullName.
+   * Retrieves all non-deleted user records (active and inactive) from the Users table,
+   * ordered alphabetically by FullName. Inactive users are still returned so they remain
+   * manageable (e.g. re-activatable) from the UI; only DeleteStatus excludes rows here.
    *
    * SQL Query:
    * SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
    * FROM Users
-   * WHERE IsActive = 1
+   * WHERE DeleteStatus = 0
    * ORDER BY FullName ASC
    */
   static async getAllUsers(): Promise<User[]> {
@@ -86,13 +89,13 @@ export class UserRepository {
       const rows = await query<User>(
         `SELECT UserId, Username, PasswordHash, FullName, Role, IsActive, Email, ContactNumber, CreatedAt, UpdatedAt
          FROM Users
-         WHERE IsActive = 1
+         WHERE DeleteStatus = 0
          ORDER BY FullName ASC`
       );
       return rows;
     } catch (err: any) {
       logger.error(`[UserRepository.getAllUsers] Database query failed: ${err.message}`);
-      throw new UserRepositoryError(`Failed to retrieve all active users: ${err.message}`, err);
+      throw new UserRepositoryError(`Failed to retrieve all users: ${err.message}`, err);
     }
   }
 
@@ -105,7 +108,7 @@ export class UserRepository {
    * OUTPUT INSERTED.UserId, INSERTED.Username, INSERTED.PasswordHash, INSERTED.FullName, INSERTED.Role, INSERTED.IsActive, INSERTED.Email, INSERTED.ContactNumber, INSERTED.CreatedAt, INSERTED.UpdatedAt
    * VALUES (@Username, @PasswordHash, @FullName, @Role, @Email, @ContactNumber, 1)
    */
-  static async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive'>): Promise<User> {
+  static async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive' | 'DeleteStatus'>): Promise<User> {
     try {
       const rows = await query<User>(
         `INSERT INTO Users (Username, PasswordHash, FullName, Role, Email, ContactNumber, IsActive)
@@ -151,7 +154,7 @@ export class UserRepository {
    *     Email = @Email,
    *     ContactNumber = @ContactNumber,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE UserId = @UserId
+   * WHERE UserId = @UserId AND DeleteStatus = 0
    */
   static async updateUser(
     user: Pick<User, 'UserId' | 'Username' | 'FullName' | 'Role' | 'IsActive' | 'Email' | 'ContactNumber'>
@@ -172,7 +175,7 @@ export class UserRepository {
              Email = @Email,
              ContactNumber = @ContactNumber,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE UserId = @UserId`,
+         WHERE UserId = @UserId AND DeleteStatus = 0`,
         {
           UserId: user.UserId,
           Username: user.Username,
@@ -194,21 +197,25 @@ export class UserRepository {
   }
 
   /**
-   * Performs a soft delete by setting IsActive to 0 (false) for the specified UserId.
-   * 
+   * Performs a soft delete by setting IsActive to 0 (false) and DeleteStatus to 1 (true)
+   * for the specified UserId. Once DeleteStatus is set, every other query in this
+   * repository (which all filter on DeleteStatus = 0) treats the row as gone.
+   *
    * SQL Query:
    * UPDATE Users
    * SET IsActive = 0,
+   *     DeleteStatus = 1,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE UserId = @UserId
+   * WHERE UserId = @UserId AND DeleteStatus = 0
    */
   static async disableUser(id: number): Promise<void> {
     try {
       const { rowsAffected } = await execute(
         `UPDATE Users
          SET IsActive = 0,
+             DeleteStatus = 1,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE UserId = @UserId`,
+         WHERE UserId = @UserId AND DeleteStatus = 0`,
         { UserId: id }
       );
 
@@ -228,7 +235,7 @@ export class UserRepository {
    * UPDATE Users
    * SET PasswordHash = @PasswordHash,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE UserId = @UserId
+   * WHERE UserId = @UserId AND DeleteStatus = 0
    */
   static async resetPassword(id: number, passwordHash: string): Promise<void> {
     try {
@@ -236,7 +243,7 @@ export class UserRepository {
         `UPDATE Users
          SET PasswordHash = @PasswordHash,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE UserId = @UserId`,
+         WHERE UserId = @UserId AND DeleteStatus = 0`,
         {
           UserId: id,
           PasswordHash: passwordHash
@@ -266,7 +273,7 @@ export class UserRepository {
     return UserRepository.getAllUsers();
   }
 
-  async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive'>): Promise<User> {
+  async createUser(user: Omit<User, 'UserId' | 'CreatedAt' | 'UpdatedAt' | 'IsActive' | 'DeleteStatus'>): Promise<User> {
     return UserRepository.createUser(user);
   }
 

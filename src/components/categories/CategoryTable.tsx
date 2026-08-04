@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Power, Search, Filter } from "lucide-react";
+import { Pencil, Trash2, Search, Filter } from "lucide-react";
 import Table, { TableColumn } from "../common/Table";
 import { Category } from "../../types/category";
 
@@ -7,12 +7,11 @@ interface CategoryTableProps {
   categories: Category[];
   onEdit?: (category: Category) => void;
   onDelete?: (category: Category) => void;
-  onActivate?: (category: Category) => void;
 }
 
 type StatusFilter = "All" | "Active" | "Inactive";
 
-export default function CategoryTable({ categories, onEdit, onDelete, onActivate }: CategoryTableProps) {
+export default function CategoryTable({ categories, onEdit, onDelete }: CategoryTableProps) {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -68,27 +67,16 @@ export default function CategoryTable({ categories, onEdit, onDelete, onActivate
           >
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </button>
-          {category.isActive ? (
-            <button
-              type="button"
-              onClick={() => onDelete?.(category)}
-              title="Delete"
-              aria-label={`Delete ${category.categoryName}`}
-              className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-slate-400 dark:hover:text-rose-400"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onActivate?.(category)}
-              title="Activate"
-              aria-label={`Activate ${category.categoryName}`}
-              className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-emerald-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-slate-400 dark:hover:text-emerald-400"
-            >
-              <Power className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onDelete?.(category)}
+            disabled={!category.isActive}
+            title={category.isActive ? "Delete" : "Already inactive — edit the category to reactivate"}
+            aria-label={`Delete ${category.categoryName}`}
+            className="rounded text-slate-500 transition-transform duration-150 ease-in-out hover:scale-110 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 dark:text-slate-400 dark:hover:text-rose-400"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       ),
     },

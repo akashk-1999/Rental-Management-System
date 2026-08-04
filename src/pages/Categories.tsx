@@ -69,7 +69,12 @@ export default function Categories() {
     setSubmitError(null);
     try {
       if (modalMode === "edit" && selectedCategory) {
-        await categoriesApi.updateCategory(selectedCategory.categoryId, formData);
+        await categoriesApi.updateCategory(selectedCategory.categoryId, { categoryName: formData.categoryName });
+
+        if (formData.isActive !== selectedCategory.isActive) {
+          await categoriesApi.updateCategoryStatus(selectedCategory.categoryId, { isActive: formData.isActive });
+        }
+
         showToast("Category updated successfully.");
       } else {
         await categoriesApi.createCategory(formData);
@@ -116,17 +121,6 @@ export default function Categories() {
     }
   };
 
-  const handleActivateCategory = async (category: Category) => {
-    try {
-      await categoriesApi.updateCategoryStatus(category.categoryId, { isActive: true });
-      await fetchCategories();
-      showToast("Category activated successfully.");
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to activate category. Please try again.", "error");
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -150,7 +144,6 @@ export default function Categories() {
           categories={categories}
           onEdit={openEditModal}
           onDelete={handleDeleteCategory}
-          onActivate={handleActivateCategory}
         />
       )}
 

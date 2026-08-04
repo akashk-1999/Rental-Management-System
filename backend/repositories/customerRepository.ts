@@ -21,14 +21,14 @@ export class CustomerRepository {
    * SQL Query:
    * SELECT CustomerId, CustomerName, MobileNumber, AlternateNumber, Address, IdProof, Notes, CreatedAt, UpdatedAt
    * FROM Customers
-   * WHERE MobileNumber = @MobileNumber
+   * WHERE MobileNumber = @MobileNumber AND DeleteStatus = 0
    */
   static async getCustomerByMobile(mobileNumber: string): Promise<Customer | null> {
     try {
       const rows = await query<Customer>(
         `SELECT CustomerId, CustomerName, MobileNumber, AlternateNumber, Address, IdProof, Notes, CreatedAt, UpdatedAt
          FROM Customers
-         WHERE MobileNumber = @MobileNumber`,
+         WHERE MobileNumber = @MobileNumber AND DeleteStatus = 0`,
         { MobileNumber: mobileNumber }
       );
       return rows.length > 0 ? rows[0] : null;

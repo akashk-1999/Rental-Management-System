@@ -5,6 +5,7 @@ export interface CategoryRecord {
   CategoryId: number;
   CategoryName: string;
   IsActive: boolean;
+  DeleteStatus: boolean;
   CreatedAt: Date;
   UpdatedAt: Date | null;
 }
@@ -27,14 +28,14 @@ export class CategoryRepository {
    * SQL Query:
    * SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
    * FROM ItemCategories
-   * WHERE CategoryId = @CategoryId
+   * WHERE CategoryId = @CategoryId AND DeleteStatus = 0
    */
   static async getCategoryById(id: number): Promise<CategoryRecord | null> {
     try {
       const rows = await query<CategoryRecord>(
         `SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
          FROM ItemCategories
-         WHERE CategoryId = @CategoryId`,
+         WHERE CategoryId = @CategoryId AND DeleteStatus = 0`,
         { CategoryId: id }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -50,14 +51,14 @@ export class CategoryRepository {
    * SQL Query:
    * SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
    * FROM ItemCategories
-   * WHERE CategoryName = @CategoryName
+   * WHERE CategoryName = @CategoryName AND DeleteStatus = 0
    */
   static async getCategoryByName(categoryName: string): Promise<CategoryRecord | null> {
     try {
       const rows = await query<CategoryRecord>(
         `SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
          FROM ItemCategories
-         WHERE CategoryName = @CategoryName`,
+         WHERE CategoryName = @CategoryName AND DeleteStatus = 0`,
         { CategoryName: categoryName }
       );
       return rows.length > 0 ? rows[0] : null;
@@ -69,11 +70,13 @@ export class CategoryRepository {
 
   /**
    * Retrieves all category records from the ItemCategories table, ordered alphabetically by CategoryName.
-   * Inactive categories are included so they remain visible for reactivation.
+   * Inactive categories are included so they remain visible for reactivation; soft-deleted
+   * categories are excluded.
    *
    * SQL Query:
    * SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
    * FROM ItemCategories
+   * WHERE DeleteStatus = 0
    * ORDER BY CategoryName ASC
    */
   static async getAllCategories(): Promise<CategoryRecord[]> {
@@ -81,6 +84,7 @@ export class CategoryRepository {
       const rows = await query<CategoryRecord>(
         `SELECT CategoryId, CategoryName, IsActive, CreatedAt, UpdatedAt
          FROM ItemCategories
+         WHERE DeleteStatus = 0
          ORDER BY CategoryName ASC`
       );
       return rows;
@@ -132,7 +136,7 @@ export class CategoryRepository {
    * UPDATE ItemCategories
    * SET CategoryName = @CategoryName,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE CategoryId = @CategoryId
+   * WHERE CategoryId = @CategoryId AND DeleteStatus = 0
    */
   static async updateCategory(category: Pick<CategoryRecord, 'CategoryId' | 'CategoryName'>): Promise<void> {
     try {
@@ -146,7 +150,7 @@ export class CategoryRepository {
         `UPDATE ItemCategories
          SET CategoryName = @CategoryName,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE CategoryId = @CategoryId`,
+         WHERE CategoryId = @CategoryId AND DeleteStatus = 0`,
         {
           CategoryId: category.CategoryId,
           CategoryName: category.CategoryName
@@ -170,7 +174,7 @@ export class CategoryRepository {
    * UPDATE ItemCategories
    * SET IsActive = @IsActive,
    *     UpdatedAt = SYSUTCDATETIME()
-   * WHERE CategoryId = @CategoryId
+   * WHERE CategoryId = @CategoryId AND DeleteStatus = 0
    */
   static async updateCategoryStatus(id: number, isActive: boolean): Promise<void> {
     try {
@@ -178,7 +182,7 @@ export class CategoryRepository {
         `UPDATE ItemCategories
          SET IsActive = @IsActive,
              UpdatedAt = SYSUTCDATETIME()
-         WHERE CategoryId = @CategoryId`,
+         WHERE CategoryId = @CategoryId AND DeleteStatus = 0`,
         {
           CategoryId: id,
           IsActive: isActive ? 1 : 0

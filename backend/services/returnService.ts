@@ -20,8 +20,10 @@ interface ResolvedReturnItem {
 
 /**
  * ReturnService handles business logic for receiving returned rental items (Phase 1: recording
- * the return, updating the rental's status, and bumping Item.TotalQuantity back up — no late
- * fees, damage charges, deposit deductions, payments, or inventory forecasting).
+ * the return and updating the rental's status — no late fees, damage charges, deposit
+ * deductions, payments, or inventory forecasting). Item.TotalQuantity is never touched; the
+ * returned quantity is reflected in AvailableStock purely via vw_ItemInventoryStatus reading
+ * ReturnEvents.
  *
  * It is framework-independent and relies on constructor injection of ReturnRepository and
  * RentalRepository (reused for rental existence/status checks), consistent with the rentals module.
@@ -91,8 +93,10 @@ export class ReturnService {
 
   /**
    * Validates and records a return against a rental's line items, then atomically persists the
-   * ReturnEvents rows, restores the returned quantity to each Item's TotalQuantity, and recomputes
-   * the rental's Status (Returned once every line item is fully returned, otherwise PartialReturn).
+   * ReturnEvents rows and recomputes the rental's Status (Returned once every line item is fully
+   * returned, otherwise PartialReturn). The quantity-remaining check here is re-verified under a
+   * row lock inside ReturnRepository.createReturnTransaction, since this read happens outside any
+   * transaction and is otherwise racy under concurrent requests.
    */
   async createReturn(input: CreateReturnInput, recordedByUserId: number): Promise<SafeReturnResult> {
     const rentalId = Number(input.rentalId);
@@ -194,6 +198,7 @@ export class ReturnService {
       returnedItems: resolvedItems.map((resolved) => ({
         rentalLineItemId: resolved.rentalLineItemId,
         itemId: resolved.itemId,
+        itemName: resolved.itemName,
         quantityReturned: resolved.quantityReturned
       })),
       newRentalStatus

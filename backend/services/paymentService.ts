@@ -113,6 +113,9 @@ export class PaymentService {
   /**
    * Validates and records a payment against a rental, then atomically persists the Payments row
    * and recomputes the rental's PaymentStatus from the new Amount Already Paid / Remaining Balance.
+   * The remaining-balance check here is re-verified under a row lock inside
+   * PaymentRepository.createPaymentTransaction, since this read happens outside any transaction
+   * and is otherwise racy under concurrent requests.
    */
   async createPayment(input: CreatePaymentInput, recordedByUserId: number): Promise<SafePaymentRentalDetail> {
     const rentalId = Number(input.rentalId);

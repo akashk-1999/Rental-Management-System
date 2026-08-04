@@ -111,12 +111,10 @@ export class RentalService {
 
   /**
    * Validates and creates a new rental: resolves or creates the customer, validates every line
-   * item (item exists, is Active, quantity > 0, quantity does not exceed the item's TotalQuantity),
-   * computes totals server-side from the Items master pricing, and persists everything atomically.
-   *
-   * Note (Phase 1 simplification): "available quantity" here is the Item's master TotalQuantity.
-   * True point-in-time availability (accounting for units already out on other active rentals) is
-   * deferred to the future Inventory module, which will use vw_ItemInventoryStatus.
+   * item (item exists, is Active, quantity > 0, quantity does not exceed the item's true available
+   * stock — TotalQuantity minus units already out on other active rentals, damaged, or lost, per
+   * vw_ItemInventoryStatus, not just the master TotalQuantity), computes totals server-side from
+   * the Items master pricing, and persists everything atomically.
    */
   async createRental(input: CreateRentalInput, createdByUserId: number): Promise<SafeRental> {
     if (!input.customer) {
@@ -187,9 +185,9 @@ export class RentalService {
         logger.warn(`[RentalService.createRental] Failed: Item '${item.ItemName}' is not active.`);
         throw new HttpError(400, `Item '${item.ItemName}' is not active`);
       }
-      if (quantityRented > item.TotalQuantity) {
+      if (quantityRented > item.AvailableStock) {
         logger.warn(
-          `[RentalService.createRental] Failed: Requested quantity ${quantityRented} for '${item.ItemName}' exceeds available quantity ${item.TotalQuantity}.`
+          `[RentalService.createRental] Failed: Requested quantity ${quantityRented} for '${item.ItemName}' exceeds available stock ${item.AvailableStock}.`
         );
         throw new HttpError(400, `Requested quantity for '${item.ItemName}' exceeds available quantity`);
       }
